@@ -416,7 +416,23 @@ ActionResult SoundEditor::buttonAction(deluge::hid::Button b, bool on, bool inCa
 
 	// Back button
 	else if (b == BACK) {
-		if (currentUIMode == UI_MODE_NONE || currentUIMode == UI_MODE_AUDITIONING
+		// Reset clip to saved when pressing back while holding save - mirrors the same combo in
+		// InstrumentClipView, needed separately here since holding SAVE while actually looking at
+		// a parameter keeps you in the sound editor's own UI, not the clip view's.
+		if (currentUIMode == UI_MODE_HOLDING_SAVE_BUTTON) {
+			if (on && isUIInstrumentClipView) {
+				if (inCardRoutine) {
+					return ActionResult::REMIND_ME_OUTSIDE_CARD_ROUTINE;
+				}
+				getCurrentInstrumentClip()->resetToSavedBaseline();
+				AudioEngine::mustUpdateReverbParamsBeforeNextRender = true;
+				display->displayPopup(deluge::l10n::get(deluge::l10n::String::STRING_FOR_CLIP_RESET_TO_SAVED));
+				// Redraw the current param screen so its modified-marker immediately reflects
+				// that nothing's modified anymore.
+				renderUIsForOled();
+			}
+		}
+		else if (currentUIMode == UI_MODE_NONE || currentUIMode == UI_MODE_AUDITIONING
 		    || currentUIMode == UI_MODE_NOTES_PRESSED || currentUIMode == UI_MODE_HOLDING_AFFECT_ENTIRE_IN_SOUND_EDITOR
 		    || currentUIMode == UI_MODE_STUTTERING) {
 			if (on) {
@@ -448,16 +464,36 @@ ActionResult SoundEditor::buttonAction(deluge::hid::Button b, bool on, bool inCa
 
 	// Save button
 	else if (b == SAVE) {
-		if (on && (currentUIMode == UI_MODE_NONE) && !inSettingsMenu() && isUIInstrumentClipView) {
+		if (on) {
+			if (currentUIMode == UI_MODE_NONE && !inSettingsMenu() && isUIInstrumentClipView) {
+				if (Buttons::isShiftButtonPressed()) {
+					if (inCardRoutine) {
+						return ActionResult::REMIND_ME_OUTSIDE_CARD_ROUTINE;
+					}
+					if (getCurrentMenuItem() == &menu_item::multiRangeMenu) {
+						menu_item::multiRangeMenu.deletePress();
+					}
+				}
+				else {
+					// Don't open the save-preset UI immediately - defer to release (below) so a
+					// hold can be used for other things first (see the BACK-button case above,
+					// "reset clip to saved"), same tap-vs-hold pattern View::buttonAction() already
+					// uses for SAVE in the main clip view. Without this, holding SAVE while looking
+					// at a parameter jumped straight into "save preset" and the reset combo could
+					// never be reached at all.
+					currentUIMode = UI_MODE_HOLDING_SAVE_BUTTON;
+					view.timeSaveButtonPressed = AudioEngine::audioSampleTimer;
+					indicator_leds::setLedState(IndicatorLED::SAVE, true);
+				}
+			}
+		}
+		else if (currentUIMode == UI_MODE_HOLDING_SAVE_BUTTON) {
 			if (inCardRoutine) {
 				return ActionResult::REMIND_ME_OUTSIDE_CARD_ROUTINE;
 			}
-			if (Buttons::isShiftButtonPressed()) {
-				if (getCurrentMenuItem() == &menu_item::multiRangeMenu) {
-					menu_item::multiRangeMenu.deletePress();
-				}
-			}
-			else {
+			currentUIMode = UI_MODE_NONE;
+			indicator_leds::setLedState(IndicatorLED::SAVE, false);
+			if ((int32_t)(AudioEngine::audioSampleTimer - view.timeSaveButtonPressed) < kShortPressTime) {
 				openUI(&saveInstrumentPresetUI);
 			}
 		}
