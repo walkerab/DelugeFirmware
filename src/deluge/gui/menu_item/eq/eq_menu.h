@@ -108,10 +108,12 @@ public:
 
 		// Draw control indicators
 		selected_x_ = -1, selected_y_ = -1;
-		drawControlIndicator(center_between(bass_x0, bass_x1), bass_y1, currentItem == items[0]);
-		drawControlIndicator(bass_x2, bass_y2, currentItem == items[1]);
-		drawControlIndicator(treble_x2, treble_y2, currentItem == items[2]);
-		drawControlIndicator(center_between(treble_x1, treble_x0), treble_y1, currentItem == items[3]);
+		drawControlIndicator(center_between(bass_x0, bass_x1), bass_y1, currentItem == items[0],
+		                     items[0]->isModifiedFromSaved());
+		drawControlIndicator(bass_x2, bass_y2, currentItem == items[1], items[1]->isModifiedFromSaved());
+		drawControlIndicator(treble_x2, treble_y2, currentItem == items[2], items[2]->isModifiedFromSaved());
+		drawControlIndicator(center_between(treble_x1, treble_x0), treble_y1, currentItem == items[3],
+		                     items[3]->isModifiedFromSaved());
 	}
 
 private:
@@ -171,7 +173,8 @@ private:
 		return result;
 	}
 
-	void drawControlIndicator(const float center_x, const float center_y, const bool is_selected) {
+	void drawControlIndicator(const float center_x, const float center_y, const bool is_selected,
+	                          const bool is_modified) {
 		oled_canvas::Canvas& image = OLED::main;
 
 		const int32_t ix = static_cast<int32_t>(center_x);
@@ -199,6 +202,22 @@ private:
 
 		// Draw a transition square
 		image.drawRectangle(ix - square_size, iy - square_size, ix + square_size, iy + square_size);
+
+		if (is_modified) {
+			// Above-right of the node, same placement convention as EnvelopeMenu's transition dot.
+			// Clamped to the OLED's edges since bass/treble nodes can sit close to either side.
+			int32_t maxDotX = OLED_MAIN_WIDTH_PIXELS - 2;
+			int32_t dotX = (ix + square_size + 3 < maxDotX) ? (ix + square_size + 3) : maxDotX;
+			int32_t dotY = (iy - square_size - 3 > 0) ? (iy - square_size - 3) : 0;
+			// The EQ curve's own lines can pass through this spot - clear a small halo first so
+			// the dot doesn't silently merge into a line and disappear.
+			for (int32_t x = dotX - 1; x <= dotX + 1; x++) {
+				for (int32_t y = dotY - 1; y <= dotY + 1; y++) {
+					image.clearPixel(x, y);
+				}
+			}
+			image.drawCircle(dotX, dotY, 1, true);
+		}
 	}
 };
 

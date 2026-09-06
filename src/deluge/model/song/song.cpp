@@ -1415,6 +1415,7 @@ weAreInArrangementEditorOrInClipInstance:
 void Song::refreshSavedBaseline() {
 	paramManager.refreshSavedBaseline();
 	globalEffectable.refreshSavedBaseline();
+	AudioEngine::reverbSidechain.refreshSavedBaseline();
 
 	for (int32_t c = 0; c < sessionClips.getNumElements(); c++) {
 		sessionClips.getClipAtIndex(c)->refreshSavedBaseline();

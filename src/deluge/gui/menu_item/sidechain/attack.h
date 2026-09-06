@@ -63,6 +63,8 @@ public:
 	[[nodiscard]] int32_t getMaxValue() const override { return 50; }
 	[[nodiscard]] RenderingStyle getRenderingStyle() const override { return ATTACK; }
 
+	bool isModifiedFromSaved() override { return getSidechain(is_reverb_sidechain_)->isAttackModifiedFromSaved(); }
+
 	bool isRelevant(ModControllableAudio* modControllable, int32_t whichThing) override {
 		return !is_reverb_sidechain_ || AudioEngine::reverbSidechainVolume >= 0;
 	}

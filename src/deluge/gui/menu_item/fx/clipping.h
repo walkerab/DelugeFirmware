@@ -54,6 +54,8 @@ public:
 	}
 	[[nodiscard]] int32_t getMaxValue() const override { return 15; }
 	[[nodiscard]] RenderingStyle getRenderingStyle() const override { return BAR; }
+
+	bool isModifiedFromSaved() override { return soundEditor.currentModControllable->isClippingAmountModifiedFromSaved(); }
 };
 
 } // namespace deluge::gui::menu_item::fx

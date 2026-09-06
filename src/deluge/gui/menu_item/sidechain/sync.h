@@ -67,6 +67,8 @@ public:
 		return !is_reverb_sidechain_ || AudioEngine::reverbSidechainVolume >= 0;
 	}
 
+	bool isModifiedFromSaved() override { return getSidechain(is_reverb_sidechain_)->isSyncModifiedFromSaved(); }
+
 private:
 	bool is_reverb_sidechain_;
 };

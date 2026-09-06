@@ -75,8 +75,13 @@ public:
 	/// Value of modFXType_ as of the last save or load, whichever is most recent - same "modified
 	/// since saved" concept as AutoParam::savedValue, for the plain (non-AutoParam) settings on
 	/// this class. Piecemeal: only modFXType_ is covered so far.
-	inline void refreshSavedBaseline() { modFXType_saved_ = modFXType_; }
+	inline void refreshSavedBaseline() {
+		modFXType_saved_ = modFXType_;
+		clippingAmount_saved_ = clippingAmount;
+		sidechain.refreshSavedBaseline();
+	}
 	inline bool isModFXTypeModifiedFromSaved() { return modFXType_ != modFXType_saved_; }
+	inline bool isClippingAmountModifiedFromSaved() { return clippingAmount != clippingAmount_saved_; }
 	bool offerReceivedCCToLearnedParamsForClip(MIDICable& cable, uint8_t channel, uint8_t ccNumber, uint8_t value,
 	                                           ModelStackWithTimelineCounter* modelStack, int32_t noteRowIndex = -1);
 	bool offerReceivedCCToLearnedParamsForSong(MIDICable& cable, uint8_t channel, uint8_t ccNumber, uint8_t value,
@@ -111,6 +116,7 @@ public:
 
 	bool sampleRateReductionOnLastTime;
 	uint8_t clippingAmount; // Song probably doesn't currently use this?
+	uint8_t clippingAmount_saved_{0};
 	FilterMode lpfMode;
 	FilterMode hpfMode;
 	FilterRoute filterRoute;
