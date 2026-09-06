@@ -18,6 +18,7 @@
 #include "definitions_cxx.hpp"
 #include "gui/menu_item/integer.h"
 #include "gui/menu_item/patched_param.h"
+#include "gui/menu_item/value_scaling.h"
 
 namespace deluge::gui::menu_item::patched_param {
 class Integer : public PatchedParam, public menu_item::IntegerContinuous {
@@ -43,6 +44,9 @@ public:
 
 	uint8_t shouldDrawDotOnName() final { return PatchedParam::shouldDrawDotOnName(); }
 	bool isModifiedFromSaved() final { return PatchedParam::isModifiedFromSaved(); }
+	int32_t quantizeValueForModifiedComparison(int32_t rawValue) final {
+		return computeCurrentValueForStandardMenuItem(rawValue);
+	}
 	MenuItem* selectButtonPress() final { return PatchedParam::selectButtonPress(); }
 	// this button action function definition should not be required as it should be inherited
 	// from the param class, however it does not work if the definition is removed, so there

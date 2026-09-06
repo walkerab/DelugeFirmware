@@ -34,5 +34,18 @@ public:
 	virtual PatchSource getPatchSource() { return PatchSource::NONE; }
 	void selectAutomationViewParameter(bool clipMinder);
 	bool isValueModifiedFromSaved();
+
+	/// Most menu items round-trip their AutoParam's raw value through a coarse UI display scale
+	/// (e.g. "standard" scaling collapses the whole int32_t range down to just 51 discrete grid
+	/// points - see value_scaling.h) every time they're read/written via the menu. A saved raw
+	/// value essentially never lands exactly on one of those grid points to begin with (it wasn't
+	/// necessarily set via this same UI), so touching the knob at all and dialing back to the same
+	/// displayed number can leave the raw value permanently, harmlessly different from savedValue -
+	/// the naive exact comparison would then never clear the "modified" dot even though nothing the
+	/// user can perceive has changed. Override this to apply the same scale the class's own
+	/// readCurrentValue()/getFinalValue() use, so "modified" means "the displayed value differs",
+	/// not "the raw bytes differ". Defaults to identity (exact raw comparison) for anything that
+	/// doesn't override it.
+	virtual int32_t quantizeValueForModifiedComparison(int32_t rawValue) { return rawValue; }
 };
 } // namespace deluge::gui::menu_item

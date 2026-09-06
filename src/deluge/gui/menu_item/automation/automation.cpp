@@ -139,7 +139,8 @@ bool Automation::isValueModifiedFromSaved() {
 	char modelStackMemory[MODEL_STACK_MAX_SIZE];
 	ModelStackWithAutoParam* modelStack = getModelStackWithParam(modelStackMemory);
 	if (modelStack && modelStack->autoParam) {
-		return modelStack->autoParam->isModifiedFromSaved();
+		return valueDiffersFromSaved(quantizeValueForModifiedComparison(modelStack->autoParam->currentValue),
+		                             quantizeValueForModifiedComparison(modelStack->autoParam->savedValue));
 	}
 	return false;
 }
