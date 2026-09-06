@@ -620,11 +620,16 @@ void HorizontalMenu::renderColumnLabel(MenuItem* menuItem, int32_t labelY, int32
 	image.drawString(label.c_str(), label_start_x, labelY, kTextSpacingX, kTextSpacingY);
 
 	if (menuItem->isModifiedFromSaved()) {
-		// Positioned just past the label's own right edge, not a fixed slot-corner position,
-		// so the gap between text and dot reads consistently regardless of how much the
-		// centered label's width varies from column to column. Clamped to the slot's right
-		// edge in case the label was truncated to nearly fill the available width.
-		int32_t dotX = std::min(label_start_x + label_width + 3, slotStartX + slotWidth - 3);
+		// Positioned just past the label's own right edge, not a fixed slot-corner position, so
+		// the gap between text and dot reads consistently regardless of how much the centered
+		// label's width varies from column to column. 1px gap - confirmed visually correct
+		// against the actual glyph edge, not just the nominal string-width measurement.
+		//
+		// Was previously "+3" clamped to "slotWidth - 3": for a label with little slack in its
+		// slot (e.g. "VOLU") that clamp silently overrode the +3 down to +1, while a label with
+		// more slack (e.g. "PAN") never hit the clamp and kept the full +3 - so the two ended up
+		// visibly different distances from the dot despite using "the same" formula.
+		int32_t dotX = std::min(label_start_x + label_width + 1, slotStartX + slotWidth - 1);
 		image.drawCircle(dotX, labelY + 1, 1, true);
 	}
 
