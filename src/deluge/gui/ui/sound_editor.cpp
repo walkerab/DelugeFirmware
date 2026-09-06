@@ -416,23 +416,7 @@ ActionResult SoundEditor::buttonAction(deluge::hid::Button b, bool on, bool inCa
 
 	// Back button
 	else if (b == BACK) {
-		// Reset clip to saved when pressing back while holding save - mirrors the same combo in
-		// InstrumentClipView, needed separately here since holding SAVE while actually looking at
-		// a parameter keeps you in the sound editor's own UI, not the clip view's.
-		if (currentUIMode == UI_MODE_HOLDING_SAVE_BUTTON) {
-			if (on && isUIInstrumentClipView) {
-				if (inCardRoutine) {
-					return ActionResult::REMIND_ME_OUTSIDE_CARD_ROUTINE;
-				}
-				getCurrentInstrumentClip()->resetToSavedBaseline();
-				AudioEngine::mustUpdateReverbParamsBeforeNextRender = true;
-				display->displayPopup(deluge::l10n::get(deluge::l10n::String::STRING_FOR_CLIP_RESET_TO_SAVED));
-				// Redraw the current param screen so its modified-marker immediately reflects
-				// that nothing's modified anymore.
-				renderUIsForOled();
-			}
-		}
-		else if (currentUIMode == UI_MODE_NONE || currentUIMode == UI_MODE_AUDITIONING
+		if (currentUIMode == UI_MODE_NONE || currentUIMode == UI_MODE_AUDITIONING
 		    || currentUIMode == UI_MODE_NOTES_PRESSED || currentUIMode == UI_MODE_HOLDING_AFFECT_ENTIRE_IN_SOUND_EDITOR
 		    || currentUIMode == UI_MODE_STUTTERING) {
 			if (on) {
@@ -476,11 +460,11 @@ ActionResult SoundEditor::buttonAction(deluge::hid::Button b, bool on, bool inCa
 				}
 				else {
 					// Don't open the save-preset UI immediately - defer to release (below) so a
-					// hold can be used for other things first (see the BACK-button case above,
-					// "reset clip to saved"), same tap-vs-hold pattern View::buttonAction() already
-					// uses for SAVE in the main clip view. Without this, holding SAVE while looking
-					// at a parameter jumped straight into "save preset" and the reset combo could
-					// never be reached at all.
+					// hold can be used for other things first (e.g. the modified-param grid
+					// highlight), same tap-vs-hold pattern View::buttonAction() already uses for
+					// SAVE in the main clip view. Without this, holding SAVE while looking at a
+					// parameter jumped straight into "save preset" and that highlight could never
+					// be reached at all.
 					currentUIMode = UI_MODE_HOLDING_SAVE_BUTTON;
 					view.timeSaveButtonPressed = AudioEngine::audioSampleTimer;
 					indicator_leds::setLedState(IndicatorLED::SAVE, true);
@@ -496,6 +480,38 @@ ActionResult SoundEditor::buttonAction(deluge::hid::Button b, bool on, bool inCa
 			if ((int32_t)(AudioEngine::audioSampleTimer - view.timeSaveButtonPressed) < kShortPressTime) {
 				openUI(&saveInstrumentPresetUI);
 			}
+		}
+	}
+
+	// Load button - only exists here to enable "reset clip to saved" (hold LOAD, press CLIP_VIEW,
+	// below) while actually looking at a parameter. LOAD has no sound-editor-specific action of
+	// its own the way SAVE does (there's no "load as new preset" equivalent here), so unlike SAVE
+	// there's nothing to defer - a short tap intentionally does nothing extra.
+	else if (b == LOAD) {
+		if (on) {
+			if (currentUIMode == UI_MODE_NONE && !inSettingsMenu() && isUIInstrumentClipView) {
+				currentUIMode = UI_MODE_HOLDING_LOAD_BUTTON;
+				indicator_leds::setLedState(IndicatorLED::LOAD, true);
+			}
+		}
+		else if (currentUIMode == UI_MODE_HOLDING_LOAD_BUTTON) {
+			currentUIMode = UI_MODE_NONE;
+			indicator_leds::setLedState(IndicatorLED::LOAD, false);
+		}
+	}
+
+	// Reset clip to saved: hold LOAD, press CLIP_VIEW
+	else if (b == CLIP_VIEW && currentUIMode == UI_MODE_HOLDING_LOAD_BUTTON) {
+		if (on) {
+			if (inCardRoutine) {
+				return ActionResult::REMIND_ME_OUTSIDE_CARD_ROUTINE;
+			}
+			getCurrentInstrumentClip()->resetToSavedBaseline();
+			AudioEngine::mustUpdateReverbParamsBeforeNextRender = true;
+			display->displayPopup(deluge::l10n::get(deluge::l10n::String::STRING_FOR_CLIP_RESET_TO_SAVED));
+			// Redraw the current param screen so its modified-marker immediately reflects that
+			// nothing's modified anymore.
+			renderUIsForOled();
 		}
 	}
 
