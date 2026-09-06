@@ -58,6 +58,14 @@ public:
 	inline bool isAttackModifiedFromSaved() const { return attack != attack_saved_; }
 	inline bool isSyncModifiedFromSaved() const { return syncType != syncType_saved_ || syncLevel != syncLevel_saved_; }
 
+	/// The reverse of refreshSavedBaseline(): reset attack/sync back to their saved baseline
+	/// ("Reset clip to saved").
+	inline void resetToSavedBaseline() {
+		attack = attack_saved_;
+		syncType = syncType_saved_;
+		syncLevel = syncLevel_saved_;
+	}
+
 private:
 	int32_t getActualAttackRate();
 	int32_t getActualReleaseRate();

@@ -293,6 +293,14 @@ void ParamManager::refreshSavedBaseline() {
 	}
 }
 
+void ParamManager::resetToSavedBaseline() {
+	ParamCollectionSummary* summary = summaries;
+	while (summary->paramCollection) {
+		summary->paramCollection->resetToSavedBaseline();
+		summary++;
+	}
+}
+
 // Returns whether there is one / one could be created.
 bool ParamManager::ensureExpressionParamSetExists(bool forDrum) {
 	int32_t offset = getExpressionParamSetOffset();

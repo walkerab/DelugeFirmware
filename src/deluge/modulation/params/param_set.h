@@ -74,6 +74,7 @@ public:
 	void shiftHorizontally(ModelStackWithParamCollection* modelStack, int32_t amount, int32_t effectiveLength) final;
 	void deleteAllAutomation(Action* action, ModelStackWithParamCollection* modelStack) override;
 	void refreshSavedBaseline() override;
+	void resetToSavedBaseline() override;
 	void deleteAutomationForParamBasicForSetup(ModelStackWithParamCollection* modelStack, int32_t p);
 	void insertTime(ModelStackWithParamCollection* modelStack, int32_t pos, int32_t lengthToInsert);
 	void deleteTime(ModelStackWithParamCollection* modelStack, int32_t startPos, int32_t lengthToDelete);

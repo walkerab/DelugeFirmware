@@ -314,6 +314,12 @@ void ParamSet::refreshSavedBaseline() {
 	}
 }
 
+void ParamSet::resetToSavedBaseline() {
+	for (int32_t p = 0; p < numParams_; p++) {
+		params[p].resetToSavedValue();
+	}
+}
+
 /// this is used in arranger view to insert time between automation nodes (shift = <>)
 void ParamSet::insertTime(ModelStackWithParamCollection* modelStack, int32_t pos, int32_t lengthToInsert) {
 

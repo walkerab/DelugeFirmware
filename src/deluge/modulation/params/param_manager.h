@@ -63,6 +63,7 @@ public:
 	void forgetParamCollections();
 	void destructAndForgetParamCollections();
 	void refreshSavedBaseline();
+	void resetToSavedBaseline();
 	bool ensureExpressionParamSetExists(bool forDrum = false);
 
 	inline int32_t getExpressionParamSetOffset() { return expressionParamSetOffset; }

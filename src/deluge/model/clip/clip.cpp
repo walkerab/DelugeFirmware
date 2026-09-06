@@ -661,6 +661,10 @@ void Clip::refreshSavedBaseline() {
 	paramManager.refreshSavedBaseline();
 }
 
+void Clip::resetToSavedBaseline() {
+	paramManager.resetToSavedBaseline();
+}
+
 void Clip::writeDataToFile(Serializer& writer, Song* song) {
 
 	writer.writeAttribute("isPlaying", activeIfNoSolo);

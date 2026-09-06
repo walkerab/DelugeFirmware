@@ -51,6 +51,7 @@ public:
 	void remotelySwapParamState(AutoParamState* state, ModelStackWithParamId* modelStack) override;
 	void deleteAllAutomation(Action* action, ModelStackWithParamCollection* modelStack) override;
 	void refreshSavedBaseline() override;
+	void resetToSavedBaseline() override;
 	Error makeInterpolatedCCsGoodAgain(int32_t clipLength);
 	void grabValuesFromPos(uint32_t pos, ModelStackWithParamCollection* modelStack) override;
 	void nudgeNonInterpolatingNodesAtPos(int32_t pos, int32_t offset, int32_t lengthBeforeLoop, Action* action,

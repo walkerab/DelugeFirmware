@@ -82,6 +82,17 @@ public:
 	}
 	inline bool isModFXTypeModifiedFromSaved() { return modFXType_ != modFXType_saved_; }
 	inline bool isClippingAmountModifiedFromSaved() { return clippingAmount != clippingAmount_saved_; }
+
+	/// The reverse of refreshSavedBaseline(): reset the plain (non-AutoParam) settings on this
+	/// class back to their saved baseline ("Reset clip to saved"). Goes through setModFXType()
+	/// (virtual - Sound overrides it to set up/tear down the mod-fx processing buffer/grain
+	/// engine for the new type) rather than assigning modFXType_ directly, so switching types via
+	/// reset gets the same buffer handling a normal menu-driven type change would.
+	inline void resetToSavedBaseline() {
+		setModFXType(modFXType_saved_);
+		clippingAmount = clippingAmount_saved_;
+		sidechain.resetToSavedBaseline();
+	}
 	bool offerReceivedCCToLearnedParamsForClip(MIDICable& cable, uint8_t channel, uint8_t ccNumber, uint8_t value,
 	                                           ModelStackWithTimelineCounter* modelStack, int32_t noteRowIndex = -1);
 	bool offerReceivedCCToLearnedParamsForSong(MIDICable& cable, uint8_t channel, uint8_t ccNumber, uint8_t value,

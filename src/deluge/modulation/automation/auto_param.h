@@ -138,6 +138,12 @@ public:
 	inline void refreshSavedValue() { savedValue = currentValue; }
 	inline bool isModifiedFromSaved() { return valueDiffersFromSaved(currentValue, savedValue); }
 
+	/// Reset the live value back to the saved baseline ("Reset clip to saved"). Deliberately just
+	/// the plain scalar, same as \ref currentValue itself - if this param has automation (\ref
+	/// nodes non-empty), the next playback tick recomputes currentValue from the curve anyway, so
+	/// this is a no-op for automated params by construction, not a special case to handle here.
+	inline void resetToSavedValue() { currentValue = savedValue; }
+
 	// interpolation to calculate current value
 	bool hasInterpolationIncrement();
 	void resetInterpolationIncrement();

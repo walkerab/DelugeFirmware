@@ -131,6 +131,7 @@ public:
 	virtual Error readFromFile(Deserializer& reader, Song* song) = 0;
 	void readTagFromFile(Deserializer& reader, char const* tagName, Song* song, int32_t* readAutomationUpToPos);
 	virtual void refreshSavedBaseline();
+	virtual void resetToSavedBaseline();
 
 	virtual void copyBasicsFrom(Clip const* otherClip);
 	void setupForRecordingAsAutoOverdub(Clip* existingClip, Song* song, OverDubType newOverdubNature);

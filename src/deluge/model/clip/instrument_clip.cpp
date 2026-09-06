@@ -2486,6 +2486,28 @@ void InstrumentClip::refreshSavedBaseline() {
 	}
 }
 
+void InstrumentClip::resetToSavedBaseline() {
+	Clip::resetToSavedBaseline();
+	backedUpParamManagerMIDI.resetToSavedBaseline();
+	for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
+		noteRows.getElement(i)->resetToSavedBaseline();
+	}
+
+	// Mirrors refreshSavedBaseline() above: also reset the plain (non-AutoParam) settings on the
+	// Sound(s) behind this clip.
+	if (output->type == OutputType::SYNTH) {
+		((SoundInstrument*)output)->resetToSavedBaseline();
+	}
+	else if (output->type == OutputType::KIT) {
+		for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
+			NoteRow* thisNoteRow = noteRows.getElement(i);
+			if (thisNoteRow->drum && thisNoteRow->drum->type == DrumType::SOUND) {
+				((SoundDrum*)thisNoteRow->drum)->resetToSavedBaseline();
+			}
+		}
+	}
+}
+
 Error InstrumentClip::readFromFile(Deserializer& reader, Song* song) {
 
 	Error error;

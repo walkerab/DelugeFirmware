@@ -1132,6 +1132,12 @@ void PatchCableSet::refreshSavedBaseline() {
 	}
 }
 
+void PatchCableSet::resetToSavedBaseline() {
+	for (int32_t c = 0; c < numPatchCables; c++) {
+		patchCables[c].param.resetToSavedValue();
+	}
+}
+
 void PatchCableSet::nudgeNonInterpolatingNodesAtPos(int32_t pos, int32_t offset, int32_t lengthBeforeLoop,
                                                     Action* action, ModelStackWithParamCollection* modelStack) {
 
