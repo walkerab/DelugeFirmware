@@ -619,6 +619,12 @@ void HorizontalMenu::renderColumnLabel(MenuItem* menuItem, int32_t labelY, int32
 	const int32_t label_start_x = slotStartX + (slotWidth - label_width) / 2;
 	image.drawString(label.c_str(), label_start_x, labelY, kTextSpacingX, kTextSpacingY);
 
+	if (menuItem->isModifiedFromSaved()) {
+		// Fixed corner position (not relative to the label text) so it doesn't shift
+		// around as the label's centered width changes between items.
+		image.drawCircle(slotStartX + slotWidth - 3, labelY + 1, 1, true);
+	}
+
 	if (menuItem->getOccupiedSlots() > 1 && !menuItem->isSubmenu() && !isSelected) {
 		// Draw small lines on the left and right side if the slot is too wide
 		const int32_t y = labelY + 4;
