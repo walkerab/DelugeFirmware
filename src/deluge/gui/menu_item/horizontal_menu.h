@@ -79,6 +79,9 @@ private:
 	static void displayNotification(MenuItem* menuItem);
 	void renderTitle(const Paging& paging) const;
 	static void renderPageCounters(const Paging& paging);
+	/// Draws the column label text. If the item is modified from saved, a "." is appended to the
+	/// label string itself (not drawn as a separately-positioned dot) so it participates in the
+	/// existing centering/truncation/highlight-inversion logic like any other character.
 	static void renderColumnLabel(MenuItem* menuItem, int32_t labelY, int32_t slotStartX, int32_t slotWidth,
 	                              bool isSelected);
 	static MenuPermission initializeItem(MenuItem* menuItem);

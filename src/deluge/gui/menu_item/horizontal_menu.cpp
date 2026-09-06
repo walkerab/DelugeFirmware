@@ -17,6 +17,7 @@
 
 #include "horizontal_menu.h"
 
+#include "column_label.h"
 #include "etl/vector.h"
 #include "gui/ui/menus.h"
 #include "gui/views/automation_view.h"
@@ -622,29 +623,24 @@ void HorizontalMenu::renderColumnLabel(MenuItem* menuItem, int32_t labelY, int32
 	menuItem->getColumnLabel(label);
 	label.removeSpaces();
 
-	// If the name fits as-is, we'll squeeze it in. Otherwise, we chop off letters until
-	// we have some padding between columns.
-	int32_t label_width;
-	while ((label_width = image.getStringWidthInPixels(label.c_str(), kTextSpacingY)) + 4 >= slotWidth) {
-		label.truncate(label.size() - 1);
-	}
+	truncateColumnLabelToFit(label, slotWidth,
+	                         [&image](const char* s) { return image.getStringWidthInPixels(s, kTextSpacingY); });
+	const int32_t label_width = image.getStringWidthInPixels(label.c_str(), kTextSpacingY);
 
 	// Draw centered label
 	const int32_t label_start_x = slotStartX + (slotWidth - label_width) / 2;
 	image.drawString(label.c_str(), label_start_x, labelY, kTextSpacingX, kTextSpacingY);
 
 	if (menuItem->isModifiedFromSaved()) {
-		// Positioned just past the label's own right edge, not a fixed slot-corner position, so
-		// the gap between text and dot reads consistently regardless of how much the centered
-		// label's width varies from column to column. 1px gap - confirmed visually correct
-		// against the actual glyph edge, not just the nominal string-width measurement.
-		//
-		// Was previously "+3" clamped to "slotWidth - 3": for a label with little slack in its
-		// slot (e.g. "VOLU") that clamp silently overrode the +3 down to +1, while a label with
-		// more slack (e.g. "PAN") never hit the clamp and kept the full +3 - so the two ended up
-		// visibly different distances from the dot despite using "the same" formula.
-		int32_t dotX = std::min(label_start_x + label_width + 1, slotStartX + slotWidth - 1);
-		image.drawCircle(dotX, labelY + 1, 1, true);
+		// "Modified from saved" indicator: underline the whole label rather than drawing a
+		// separately-positioned dot, or appending an extra "." character. Three attempts at the
+		// former each broke in a different way (drifting position for variable-width labels,
+		// overlapping/corrupting the text for a tight-fitting one), and this font's characters
+		// are fixed-width at this size (Canvas::getCharWidthInPixels() special-cases the 7-9px
+		// "apple][" font as monospaced) - so an appended "." consumed a whole extra cell and ate
+		// into an already-tight label. An underline spans exactly the label's own measured
+		// width, whatever that is, so it costs zero extra characters and never needs truncating.
+		image.drawHorizontalLine(labelY + 8, label_start_x, label_start_x + label_width - 1);
 	}
 
 	if (menuItem->getOccupiedSlots() > 1 && !menuItem->isSubmenu() && !isSelected) {

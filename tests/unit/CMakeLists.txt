@@ -45,6 +45,8 @@ file(GLOB_RECURSE deluge_SOURCES
         ../../src/deluge/modulation/lfo.cpp
         # For value scaling
         ../../src/deluge/gui/menu_item/value_scaling.cpp
+        # For column label tests
+        ../../src/deluge/gui/menu_item/column_label.cpp
         # For scale tests
         ../../src/deluge/model/scale/musical_key.cpp
         ../../src/deluge/model/scale/note_set.cpp
@@ -83,6 +85,7 @@ add_executable(UnitTests
         rgb_tests.cpp
         notes_state_tests.cpp
         modified_from_saved_tests.cpp
+        column_label_tests.cpp
 )
 add_test(NAME UnitTests
         COMMAND UnitTests)
