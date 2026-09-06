@@ -119,6 +119,15 @@ void Submenu::drawSubmenuItemsForOled(std::span<MenuItem*> options, const int32_
 		// it will scroll below whenever you select that menu item
 		image.drawString(menuItem->getName(), kTextSpacingX, yPixel, kTextSpacingX, kTextSpacingY, 0, endX);
 
+		if (menuItem->isModifiedFromSaved()) {
+			// Anchored off the name's own rendered width (not a fixed position), same as the
+			// HorizontalMenu column dot - +1 confirmed visually correct for this font. Clamped so
+			// it can't run into the value preview drawn just below/after.
+			int32_t nameWidth = image.getStringWidthInPixels(menuItem->getName().data(), kTextSpacingY);
+			int32_t dotX = std::min(kTextSpacingX + nameWidth + 1, endX - 1);
+			image.drawCircle(dotX, yPixel + 1, 1, true);
+		}
+
 		// draw the menu item type after the menu item string
 		menuItem->renderSubmenuItemTypeForOled(yPixel);
 
