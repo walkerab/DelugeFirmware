@@ -90,16 +90,18 @@ public:
 		selected_x_ = -1, selected_y_ = -1;
 		const int32_t selected_pos = std::distance(items.begin(), std::ranges::find(items, currentItem));
 
-		drawTransitionIndicator(attack_x, start_y, selected_pos == 0);
-		drawTransitionIndicator(decay_x, sustain_y, selected_pos == 1);
-		drawTransitionIndicator(decay_x + (sustain_x - decay_x) / 2, sustain_y, selected_pos == 2);
-		drawTransitionIndicator(release_x, base_y, selected_pos == 3);
+		drawTransitionIndicator(attack_x, start_y, selected_pos == 0, items[0]->isModifiedFromSaved());
+		drawTransitionIndicator(decay_x, sustain_y, selected_pos == 1, items[1]->isModifiedFromSaved());
+		drawTransitionIndicator(decay_x + (sustain_x - decay_x) / 2, sustain_y, selected_pos == 2,
+		                        items[2]->isModifiedFromSaved());
+		drawTransitionIndicator(release_x, base_y, selected_pos == 3, items[3]->isModifiedFromSaved());
 	}
 
 private:
 	int32_t selected_x_, selected_y_;
 
-	void drawTransitionIndicator(const float center_x, const float center_y, const bool is_selected) {
+	void drawTransitionIndicator(const float center_x, const float center_y, const bool is_selected,
+	                             const bool is_modified) {
 		oled_canvas::Canvas& image = OLED::main;
 
 		const int32_t ix = static_cast<int32_t>(center_x);
@@ -127,6 +129,22 @@ private:
 
 		// Draw a transition square
 		image.drawRectangle(ix - square_size, iy - square_size, ix + square_size, iy + square_size);
+
+		if (is_modified) {
+			// Above-left of the node: clear of the envelope line passing through it, and (unlike
+			// above-right) can't run off the right edge for a release point near the far edge.
+			int32_t dotX = (ix - square_size - 3 > 0) ? (ix - square_size - 3) : 0;
+			int32_t dotY = (iy - square_size - 3 > 0) ? (iy - square_size - 3) : 0;
+			// The envelope curve itself (e.g. the diagonal into a release node) can pass right
+			// through this spot, so clear a small halo first - otherwise the dot silently merges
+			// into the line it's drawn over and disappears.
+			for (int32_t x = dotX - 1; x <= dotX + 1; x++) {
+				for (int32_t y = dotY - 1; y <= dotY + 1; y++) {
+					image.clearPixel(x, y);
+				}
+			}
+			image.drawCircle(dotX, dotY, 1, true);
+		}
 	}
 };
 
