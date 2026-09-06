@@ -85,9 +85,10 @@ bool HorizontalMenuGroup::focusChild(const MenuItem* child) {
 	return false;
 }
 
-void HorizontalMenuGroup::renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem) {
+void HorizontalMenuGroup::renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem,
+                                          bool hasMultiplePages) {
 	// Redirect rendering to the current menu
-	current_menu_->renderMenuItems(items, currentItem);
+	current_menu_->renderMenuItems(items, currentItem, hasMultiplePages);
 }
 
 void HorizontalMenuGroup::handleInstrumentButtonPress(std::span<MenuItem*> visiblePageItems, const MenuItem* previous,

@@ -74,6 +74,10 @@ public:
 	[[nodiscard]] bool showNotification() const override { return false; }
 	[[nodiscard]] bool showColumnLabel() const override { return false; }
 
+	bool isModifiedFromSaved() override {
+		return soundEditor.currentModControllable->isModFXTypeModifiedFromSaved();
+	}
+
 	void renderInHorizontalMenu(const SlotPosition& slot) override {
 		OLED::main.drawHorizontalLine(kScreenTitleSeparatorY, 0, OLED_MAIN_WIDTH_PIXELS - 1);
 		drawPixelsForOled();

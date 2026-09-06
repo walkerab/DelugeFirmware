@@ -29,7 +29,8 @@ class EqMenu final : public HorizontalMenu {
 public:
 	EqMenu(l10n::String newName, std::initializer_list<MenuItem*> newItems) : HorizontalMenu(newName, newItems) {}
 
-	void renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem) override {
+	void renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem, bool hasMultiplePages) override {
+		(void)hasMultiplePages; // EQ is never paged, so no page-counter collision to avoid
 		const auto [bass, treble, bass_freq, treble_freq, order_changed] = ensureCorrectItemsOrderAndGetValues();
 		if (order_changed) {
 			renderOLED();

@@ -35,7 +35,7 @@ public:
 	bool hasItem(const MenuItem* item) override;
 
 protected:
-	void renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem) override;
+	void renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem, bool hasMultiplePages) override;
 	void selectMenuItem(int32_t pageNumber, int32_t itemPos) override;
 	void handleInstrumentButtonPress(std::span<MenuItem*> visiblePageItems, const MenuItem* previous,
 	                                 int32_t pressedButtonPosition) override;

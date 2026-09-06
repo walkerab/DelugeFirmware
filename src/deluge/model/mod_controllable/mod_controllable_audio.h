@@ -71,6 +71,12 @@ public:
 	void endStutter(ParamManagerForTimeline* paramManager);
 	virtual ModFXType getModFXType() = 0;
 	virtual bool setModFXType(ModFXType newType);
+
+	/// Value of modFXType_ as of the last save or load, whichever is most recent - same "modified
+	/// since saved" concept as AutoParam::savedValue, for the plain (non-AutoParam) settings on
+	/// this class. Piecemeal: only modFXType_ is covered so far.
+	inline void refreshSavedBaseline() { modFXType_saved_ = modFXType_; }
+	inline bool isModFXTypeModifiedFromSaved() { return modFXType_ != modFXType_saved_; }
 	bool offerReceivedCCToLearnedParamsForClip(MIDICable& cable, uint8_t channel, uint8_t ccNumber, uint8_t value,
 	                                           ModelStackWithTimelineCounter* modelStack, int32_t noteRowIndex = -1);
 	bool offerReceivedCCToLearnedParamsForSong(MIDICable& cable, uint8_t channel, uint8_t ccNumber, uint8_t value,
@@ -111,6 +117,7 @@ public:
 
 	// Mod FX
 	ModFXType modFXType_;
+	ModFXType modFXType_saved_{ModFXType::NONE};
 	ModFXProcessor modfx{};
 	RMSFeedbackCompressor compressor;
 	GranularProcessor* grainFX{nullptr};

@@ -92,6 +92,7 @@ void ModControllableAudio::cloneFrom(ModControllableAudio* other) {
 	hpfMode = other->hpfMode;
 	clippingAmount = other->clippingAmount;
 	modFXType_ = other->modFXType_;
+	modFXType_saved_ = modFXType_; // Freshly cloned, so starts with no "modified" dot
 	bassFreq = other->bassFreq; // Eventually, these shouldn't be variables like this
 	trebleFreq = other->trebleFreq;
 	filterRoute = other->filterRoute;

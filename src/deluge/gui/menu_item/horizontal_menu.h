@@ -65,7 +65,7 @@ protected:
 	Layout layout{DYNAMIC};
 	int32_t lastSelectedItemPosition{kNoSelection};
 
-	virtual void renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem);
+	virtual void renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem, bool hasMultiplePages);
 	virtual Paging& preparePaging(std::span<MenuItem*> items, const MenuItem* currentItem);
 	virtual void handleInstrumentButtonPress(std::span<MenuItem*> visible_page_items, const MenuItem* previous,
 	                                         int32_t pressed_button_position);

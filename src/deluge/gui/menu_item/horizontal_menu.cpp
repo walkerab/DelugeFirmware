@@ -129,7 +129,7 @@ void HorizontalMenu::renderOLED() {
 
 	renderTitle(paging);
 	renderPageCounters(paging);
-	renderMenuItems(paging.visiblePageItems, *current_item_);
+	renderMenuItems(paging.visiblePageItems, *current_item_, has_pages);
 
 	OLED::markChanged();
 }
@@ -200,7 +200,8 @@ void HorizontalMenu::renderPageCounters(const Paging& paging) {
 	image.drawString(currentPageNum.c_str(), x, y, kTextSpacingX, kTextSpacingY);
 }
 
-void HorizontalMenu::renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem) {
+void HorizontalMenu::renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem,
+                                     bool hasMultiplePages) {
 	static auto containers_map = [&] {
 		std::map<MenuItem*, HorizontalMenuContainer*> result;
 		for (auto* container : horizontalMenuContainers) {
@@ -248,6 +249,19 @@ void HorizontalMenu::renderMenuItems(std::span<MenuItem*> items, const MenuItem*
 			// Draw the label at the bottom
 			renderColumnLabel(item, label_y, current_x, box_width, is_selected);
 			content_height -= label_height;
+		}
+		else if (item->isModifiedFromSaved()) {
+			// Full-page items with no compact column label (e.g. mod_fx::Type's "MOD-FX TYPE"
+			// overlay) don't go through renderColumnLabel()'s per-column dot - there's no single
+			// item slot to anchor to, since this occupies the whole page. Use the same top-right
+			// screen-corner position as the single-item OLED view (MenuItem::renderOLED()) instead.
+			int32_t dotX = OLED_MAIN_WIDTH_PIXELS - 4;
+			if (hasMultiplePages) {
+				// That corner is taken by renderPageCounters()'s "N/M" text on multi-page
+				// menus - shift left of it (same leftmost-extent math as that function).
+				dotX = OLED_MAIN_WIDTH_PIXELS - kTextSpacingX - 1 - (kTextSpacingX - 1) - 6 - 4;
+			}
+			image.drawCircle(dotX, OLED_MAIN_TOPMOST_PIXEL + 6, 2, true);
 		}
 
 		if (layout == FIXED && !isItemRelevant(item)) {

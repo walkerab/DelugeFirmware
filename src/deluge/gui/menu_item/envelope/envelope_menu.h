@@ -31,7 +31,8 @@ public:
 	[[nodiscard]] std::string_view getName() const override { return FormattedTitle::title(); }
 	[[nodiscard]] std::string_view getTitle() const override { return FormattedTitle::title(); }
 
-	void renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem) override {
+	void renderMenuItems(std::span<MenuItem*> items, const MenuItem* currentItem, bool hasMultiplePages) override {
+		(void)hasMultiplePages; // ENVELOPE 1-4 are never paged, so no page-counter collision to avoid
 		// Get the values in 0-50 range
 		const int32_t attack = static_cast<Segment*>(items[0])->getValue();
 		const int32_t decay = static_cast<Segment*>(items[1])->getValue();
