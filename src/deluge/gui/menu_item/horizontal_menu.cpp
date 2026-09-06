@@ -620,9 +620,12 @@ void HorizontalMenu::renderColumnLabel(MenuItem* menuItem, int32_t labelY, int32
 	image.drawString(label.c_str(), label_start_x, labelY, kTextSpacingX, kTextSpacingY);
 
 	if (menuItem->isModifiedFromSaved()) {
-		// Fixed corner position (not relative to the label text) so it doesn't shift
-		// around as the label's centered width changes between items.
-		image.drawCircle(slotStartX + slotWidth - 3, labelY + 1, 1, true);
+		// Positioned just past the label's own right edge, not a fixed slot-corner position,
+		// so the gap between text and dot reads consistently regardless of how much the
+		// centered label's width varies from column to column. Clamped to the slot's right
+		// edge in case the label was truncated to nearly fill the available width.
+		int32_t dotX = std::min(label_start_x + label_width + 3, slotStartX + slotWidth - 3);
+		image.drawCircle(dotX, labelY + 1, 1, true);
 	}
 
 	if (menuItem->getOccupiedSlots() > 1 && !menuItem->isSubmenu() && !isSelected) {
