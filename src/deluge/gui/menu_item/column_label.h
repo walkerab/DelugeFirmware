@@ -21,13 +21,20 @@
 #include <cstdint>
 #include <functional>
 
-/// Truncates `label` from the end, in place, until it fits within `slotWidthPx` (leaving 4px of
-/// padding, matching how HorizontalMenu::renderColumnLabel() has always fit labels into their
-/// column). Never truncates below one character, so a pathologically narrow slot can't spin here
-/// forever.
+/// Builds the text HorizontalMenu::renderColumnLabel() draws for a single column: the item's
+/// name, with `marker` appended if it's modified from saved (baked directly into the string
+/// rather than drawn or positioned separately - an underline and a couple of standalone-dot
+/// designs were each tried and each had a real drawback, see horizontal_menu.cpp), truncated
+/// from the end to fit within `slotWidthPx` (matching the 4px padding renderColumnLabel() has
+/// always left).
+///
+/// `marker` is reserved for and appended *after* truncation, not before - so it's the last thing
+/// to disappear under space pressure, not the first. A label that's merely tight for space should
+/// still show its modified-indicator; only a slot too narrow for even one name character plus the
+/// marker loses it entirely.
 ///
 /// `measureWidthPx` abstracts the actual font-metric lookup (Canvas::getStringWidthInPixels) so
 /// this can be unit tested without pulling in font/display/hardware code - see
 /// tests/unit/column_label_tests.cpp.
-void truncateColumnLabelToFit(StringBuf& label, int32_t slotWidthPx,
-                              const std::function<int32_t(const char*)>& measureWidthPx);
+void buildColumnLabel(StringBuf& label, bool isModified, char marker, int32_t slotWidthPx,
+                      const std::function<int32_t(const char*)>& measureWidthPx);

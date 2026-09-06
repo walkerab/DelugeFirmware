@@ -623,25 +623,22 @@ void HorizontalMenu::renderColumnLabel(MenuItem* menuItem, int32_t labelY, int32
 	menuItem->getColumnLabel(label);
 	label.removeSpaces();
 
-	truncateColumnLabelToFit(label, slotWidth,
-	                         [&image](const char* s) { return image.getStringWidthInPixels(s, kTextSpacingY); });
+	// "Modified from saved" indicator: appended to the label string as a trailing "+" rather
+	// than drawn or positioned separately. A standalone dot (anchored to the label's own text
+	// width, then at a fixed slot-corner position) drifted or overlapped/corrupted tight-fitting
+	// labels; an underline avoided the position math but couldn't sit any further from the text
+	// without exiting the label's own row (and the selection-highlight invert box's range along
+	// with it). Appending the character rides the exact same centering/truncation/highlight-
+	// inversion logic already proven correct for the label text itself - see buildColumnLabel()
+	// for how the marker is reserved space ahead of truncation so it's never the first thing
+	// truncation drops.
+	buildColumnLabel(label, menuItem->isModifiedFromSaved(), '+', slotWidth,
+	                 [&image](const char* s) { return image.getStringWidthInPixels(s, kTextSpacingY); });
 	const int32_t label_width = image.getStringWidthInPixels(label.c_str(), kTextSpacingY);
 
 	// Draw centered label
 	const int32_t label_start_x = slotStartX + (slotWidth - label_width) / 2;
 	image.drawString(label.c_str(), label_start_x, labelY, kTextSpacingX, kTextSpacingY);
-
-	if (menuItem->isModifiedFromSaved()) {
-		// "Modified from saved" indicator: underline the whole label rather than drawing a
-		// separately-positioned dot, or appending an extra "." character. Three attempts at the
-		// former each broke in a different way (drifting position for variable-width labels,
-		// overlapping/corrupting the text for a tight-fitting one), and this font's characters
-		// are fixed-width at this size (Canvas::getCharWidthInPixels() special-cases the 7-9px
-		// "apple][" font as monospaced) - so an appended "." consumed a whole extra cell and ate
-		// into an already-tight label. An underline spans exactly the label's own measured
-		// width, whatever that is, so it costs zero extra characters and never needs truncating.
-		image.drawHorizontalLine(labelY + 8, label_start_x, label_start_x + label_width - 1);
-	}
 
 	if (menuItem->getOccupiedSlots() > 1 && !menuItem->isSubmenu() && !isSelected) {
 		// Draw small lines on the left and right side if the slot is too wide

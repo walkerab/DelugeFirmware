@@ -17,12 +17,19 @@
 
 #include "column_label.h"
 
-void truncateColumnLabelToFit(StringBuf& label, int32_t slotWidthPx,
-                              const std::function<int32_t(const char*)>& measureWidthPx) {
+void buildColumnLabel(StringBuf& label, bool isModified, char marker, int32_t slotWidthPx,
+                      const std::function<int32_t(const char*)>& measureWidthPx) {
+	char markerStr[2] = {marker, '\0'};
+	int32_t markerWidthPx = isModified ? measureWidthPx(markerStr) : 0;
+
 	// If the name fits as-is, we'll squeeze it in. Otherwise, we chop off letters until
 	// we have some padding between columns - but never chop below one character, so a
 	// pathologically narrow slot can't spin here forever.
-	while (label.size() > 1 && measureWidthPx(label.c_str()) + 4 >= slotWidthPx) {
+	while (label.size() > 1 && measureWidthPx(label.c_str()) + markerWidthPx + 4 >= slotWidthPx) {
 		label.truncate(label.size() - 1);
+	}
+
+	if (isModified) {
+		label.append(marker);
 	}
 }
