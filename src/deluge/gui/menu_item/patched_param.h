@@ -46,6 +46,7 @@ public:
 	virtual deluge::modulation::params::Kind getParamKind();
 	virtual uint32_t getParamIndex();
 	virtual uint8_t shouldDrawDotOnName();
+	bool isModifiedFromSaved();
 
 	uint8_t shouldBlinkPatchingSourceShortcut(PatchSource s, uint8_t* colour);
 	MenuItem* patchingSourceShortcutPress(PatchSource s, bool previousPressStillActive = false);

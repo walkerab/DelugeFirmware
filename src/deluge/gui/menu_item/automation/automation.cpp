@@ -135,6 +135,15 @@ ActionResult Automation::buttonAction(deluge::hid::Button b, bool on, bool inCar
 	return ActionResult::NOT_DEALT_WITH;
 }
 
+bool Automation::isValueModifiedFromSaved() {
+	char modelStackMemory[MODEL_STACK_MAX_SIZE];
+	ModelStackWithAutoParam* modelStack = getModelStackWithParam(modelStackMemory);
+	if (modelStack && modelStack->autoParam) {
+		return modelStack->autoParam->isModifiedFromSaved();
+	}
+	return false;
+}
+
 void Automation::selectAutomationViewParameter(bool clipMinder) {
 	char modelStackMemory[MODEL_STACK_MAX_SIZE];
 	ModelStackWithAutoParam* modelStack = getModelStackWithParam(modelStackMemory);

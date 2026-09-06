@@ -277,6 +277,7 @@ public:
 	Clip* getClipWithOutput(Output* output, bool mustBeActive = false, Clip* excludeClip = nullptr);
 	Error readFromFile(Deserializer& reader);
 	void writeToFile();
+	void refreshSavedBaseline();
 	void loadAllSamples(bool mayActuallyReadFiles = true);
 	void renderAudio(std::span<StereoSample> outputBuffer, int32_t* reverbBuffer, int32_t sideChainHitPending);
 	bool isYNoteAllowed(int32_t yNote, bool inKeyMode);

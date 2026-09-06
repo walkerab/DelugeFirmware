@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Sean Ditny
+ * Copyright © 2024 Synthstrom Audible Limited
  *
  * This file is part of The Synthstrom Audible Deluge Firmware.
  *
@@ -16,23 +16,13 @@
  */
 
 #pragma once
-
-#include "gui/menu_item/menu_item.h"
 #include <cstdint>
 
-class ParamSet;
-class ModelStackWithAutoParam;
-
-namespace deluge::gui::menu_item {
-
-// Note that this does *not* inherit from MenuItem actually!
-class Automation {
-public:
-	MenuItem* selectButtonPress();
-	ActionResult buttonAction(deluge::hid::Button b, bool on, bool inCardRoutine);
-	virtual ModelStackWithAutoParam* getModelStackWithParam(void* memory) = 0;
-	virtual PatchSource getPatchSource() { return PatchSource::NONE; }
-	void selectAutomationViewParameter(bool clipMinder);
-	bool isValueModifiedFromSaved();
-};
-} // namespace deluge::gui::menu_item
+/// Whether a parameter's live value differs from its saved-on-disk baseline. Exact equality only -
+/// no epsilon/tolerance, since parameter values are integers with well-defined semantics.
+///
+/// Deliberately kept in its own dependency-free header (rather than inline in AutoParam itself) so
+/// it can be unit tested on host without pulling in AutoParam's full include chain.
+inline bool valueDiffersFromSaved(int32_t current, int32_t saved) {
+	return current != saved;
+}

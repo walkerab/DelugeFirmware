@@ -42,6 +42,7 @@ public:
 	}
 
 	uint8_t shouldDrawDotOnName() final { return PatchedParam::shouldDrawDotOnName(); }
+	bool isModifiedFromSaved() final { return PatchedParam::isModifiedFromSaved(); }
 	MenuItem* selectButtonPress() final { return PatchedParam::selectButtonPress(); }
 	// this button action function definition should not be required as it should be inherited
 	// from the param class, however it does not work if the definition is removed, so there

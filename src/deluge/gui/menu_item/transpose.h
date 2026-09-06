@@ -36,6 +36,7 @@ public:
 	[[nodiscard]] int32_t getNumDecimalPlaces() const final { return 2; }
 	uint32_t getParamIndex() final { return PatchedParam::getParamIndex(); }
 	uint8_t shouldDrawDotOnName() final { return PatchedParam::shouldDrawDotOnName(); }
+	bool isModifiedFromSaved() final { return PatchedParam::isModifiedFromSaved(); }
 
 	void drawValue() final { Decimal::drawValue(); }
 

@@ -130,6 +130,7 @@ public:
 	virtual char const* getXMLTag() = 0;
 	virtual Error readFromFile(Deserializer& reader, Song* song) = 0;
 	void readTagFromFile(Deserializer& reader, char const* tagName, Song* song, int32_t* readAutomationUpToPos);
+	virtual void refreshSavedBaseline();
 
 	virtual void copyBasicsFrom(Clip const* otherClip);
 	void setupForRecordingAsAutoOverdub(Clip* existingClip, Song* song, OverDubType newOverdubNature);

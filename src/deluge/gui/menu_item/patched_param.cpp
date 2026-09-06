@@ -48,6 +48,10 @@ uint8_t PatchedParam::shouldDrawDotOnName() {
 	           : 255;
 }
 
+bool PatchedParam::isModifiedFromSaved() {
+	return isValueModifiedFromSaved();
+}
+
 ParamDescriptor PatchedParam::getLearningThing() {
 	ParamDescriptor paramDescriptor;
 	paramDescriptor.setToHaveParamOnly(this->getP());

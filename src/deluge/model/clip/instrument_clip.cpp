@@ -2464,6 +2464,14 @@ void InstrumentClip::writeDataToFile(Serializer& writer, Song* song) {
 	}
 }
 
+void InstrumentClip::refreshSavedBaseline() {
+	Clip::refreshSavedBaseline();
+	backedUpParamManagerMIDI.refreshSavedBaseline();
+	for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
+		noteRows.getElement(i)->refreshSavedBaseline();
+	}
+}
+
 Error InstrumentClip::readFromFile(Deserializer& reader, Song* song) {
 
 	Error error;

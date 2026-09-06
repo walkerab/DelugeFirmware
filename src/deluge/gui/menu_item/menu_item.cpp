@@ -36,6 +36,9 @@ void MenuItem::learnCC(MIDICable& cable, int32_t channel, int32_t ccNumber, int3
 
 void MenuItem::renderOLED() {
 	deluge::hid::display::OLED::main.drawScreenTitle(getTitle());
+	if (isModifiedFromSaved()) {
+		deluge::hid::display::OLED::main.drawCircle(OLED_MAIN_WIDTH_PIXELS - 4, OLED_MAIN_TOPMOST_PIXEL + 6, 2, true);
+	}
 	deluge::hid::display::OLED::markChanged();
 	drawPixelsForOled();
 }

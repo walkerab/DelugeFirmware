@@ -479,6 +479,10 @@ gotError:
 		goto gotError;
 	}
 
+	// The song's now been fully written to disk, so every parameter's "modified since saved" baseline
+	// should reflect the values we just wrote.
+	currentSong->refreshSavedBaseline();
+
 	// If "overwriting an existing file"...
 	if (fileAlreadyExisted) {
 

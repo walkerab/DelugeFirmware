@@ -189,6 +189,12 @@ void PatchCableStrength::renderOLED() {
 			image.drawVerticalLine(separatorX - 1, textY + digitHeight + 1, textY + digitHeight + 3);
 		}
 	}
+
+	// Modified-from-saved indicator, in the strip above the value digits (which start at
+	// extraY + OLED_MAIN_TOPMOST_PIXEL + 4).
+	if (isModifiedFromSaved()) {
+		image.drawCircle(OLED_MAIN_WIDTH_PIXELS - 4, OLED_MAIN_TOPMOST_PIXEL + 2, 2, true);
+	}
 }
 
 void PatchCableStrength::readCurrentValue() {

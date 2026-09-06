@@ -242,6 +242,11 @@ public:
 	/// @warning (sapphire): I didn't actually check LTR vs RTL, someone who actually has a 7seg should do that.
 	virtual uint8_t shouldDrawDotOnName() { return 255; }
 
+	/// @brief Whether this menu item's value differs from what's saved in the project (OLED indicator).
+	///
+	/// Default false for menu items that aren't backed by an AutoParam (e.g. DX7 operator params).
+	virtual bool isModifiedFromSaved() { return false; }
+
 	/// @brief Draw the name we want to use when selecting this in a deluge::gui::menu_item::Submenu to the 7SEG.
 	///
 	/// This is based on \ref getName and \ref shouldDrawDotOnName.

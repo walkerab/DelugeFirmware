@@ -1408,6 +1408,22 @@ weAreInArrangementEditorOrInClipInstance:
 	writer.writeClosingTag("song", true, true);
 }
 
+void Song::refreshSavedBaseline() {
+	paramManager.refreshSavedBaseline();
+
+	for (int32_t c = 0; c < sessionClips.getNumElements(); c++) {
+		sessionClips.getClipAtIndex(c)->refreshSavedBaseline();
+	}
+	for (int32_t c = 0; c < arrangementOnlyClips.getNumElements(); c++) {
+		arrangementOnlyClips.getClipAtIndex(c)->refreshSavedBaseline();
+	}
+
+	for (int32_t i = 0; i < backedUpParamManagers.getNumElements(); i++) {
+		auto* backedUp = (BackedUpParamManager*)backedUpParamManagers.getElementAddress(i);
+		backedUp->paramManager.refreshSavedBaseline();
+	}
+}
+
 Error Song::readFromFile(Deserializer& reader) {
 	D_PRINTLN("DEBUG: readFromFile");
 

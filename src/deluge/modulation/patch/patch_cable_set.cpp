@@ -1126,6 +1126,12 @@ void PatchCableSet::deleteAllAutomation(Action* action, ModelStackWithParamColle
 	modelStack->summary->resetInterpolationRecord(kNumUnsignedIntegersToRepPatchCables - 1);
 }
 
+void PatchCableSet::refreshSavedBaseline() {
+	for (int32_t c = 0; c < numPatchCables; c++) {
+		patchCables[c].param.refreshSavedValue();
+	}
+}
+
 void PatchCableSet::nudgeNonInterpolatingNodesAtPos(int32_t pos, int32_t offset, int32_t lengthBeforeLoop,
                                                     Action* action, ModelStackWithParamCollection* modelStack) {
 

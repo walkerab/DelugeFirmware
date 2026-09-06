@@ -43,6 +43,7 @@ public:
 	virtual PatchSource getS() = 0;
 	uint8_t getIndexOfPatchedParamToBlink() final;
 	MenuItem* selectButtonPress() final;
+	bool isModifiedFromSaved() final { return isValueModifiedFromSaved(); }
 	ActionResult buttonAction(hid::Button b, bool on, bool inCardRoutine) override;
 	void selectEncoderAction(int32_t offset) override;
 	void horizontalEncoderAction(int32_t offset) override;

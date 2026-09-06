@@ -657,6 +657,10 @@ void Clip::writeToFile(Serializer& writer, Song* song) {
 	writer.writeClosingTag(xmlTag, true, true);
 }
 
+void Clip::refreshSavedBaseline() {
+	paramManager.refreshSavedBaseline();
+}
+
 void Clip::writeDataToFile(Serializer& writer, Song* song) {
 
 	writer.writeAttribute("isPlaying", activeIfNoSolo);

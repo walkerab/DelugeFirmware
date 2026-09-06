@@ -77,6 +77,7 @@ public:
 	void writePatchCablesToFile(Serializer& writer, bool writeAutomation);
 	void readPatchCablesFromFile(Deserializer& reader, int32_t readAutomationUpToPos);
 	void deleteAllAutomation(Action* action, ModelStackWithParamCollection* modelStack) override;
+	void refreshSavedBaseline() override;
 	void nudgeNonInterpolatingNodesAtPos(int32_t pos, int32_t offset, int32_t lengthBeforeLoop, Action* action,
 	                                     ModelStackWithParamCollection* modelStack) override;
 
