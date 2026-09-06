@@ -131,9 +131,10 @@ private:
 		image.drawRectangle(ix - square_size, iy - square_size, ix + square_size, iy + square_size);
 
 		if (is_modified) {
-			// Above-left of the node: clear of the envelope line passing through it, and (unlike
-			// above-right) can't run off the right edge for a release point near the far edge.
-			int32_t dotX = (ix - square_size - 3 > 0) ? (ix - square_size - 3) : 0;
+			// Above-right of the node. Clamped to the OLED's right edge, since a release point
+			// can sit close to it.
+			int32_t maxDotX = OLED_MAIN_WIDTH_PIXELS - 2;
+			int32_t dotX = (ix + square_size + 3 < maxDotX) ? (ix + square_size + 3) : maxDotX;
 			int32_t dotY = (iy - square_size - 3 > 0) ? (iy - square_size - 3) : 0;
 			// The envelope curve itself (e.g. the diagonal into a release node) can pass right
 			// through this spot, so clear a small halo first - otherwise the dot silently merges
