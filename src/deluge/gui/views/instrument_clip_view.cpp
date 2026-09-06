@@ -101,6 +101,8 @@ extern "C" {}
 
 using namespace deluge::gui;
 
+#define comingSoonMenu (MenuItem*)0xFFFFFFFF
+
 PLACE_SDRAM_DATA InstrumentClipView instrumentClipView{};
 
 InstrumentClipView::InstrumentClipView() : numEditPadPresses(0) {
@@ -7334,11 +7336,69 @@ bool InstrumentClipView::renderMainPads(uint32_t whichRows, RGB image[][kDisplay
 }
 
 // occupancyMask now optional
+// While holding SAVE (and not also SHIFT, which is already a distinct existing action), the main
+// grid pads temporarily show which sound parameters differ from saved, at the same grid positions
+// their shift+click shortcuts already live at - reusing paramShortcutsForSounds directly rather
+// than adding a second mapping to keep in sync with it.
+//
+// Resolves the current clip's paramManager/ModControllableAudio itself (mirroring
+// SoundEditor::getCurrentModelStack()'s non-affect-entire branch) rather than trusting
+// soundEditor.currentParamManager/currentModControllable, since those are only kept in sync when
+// the sound editor menu is actually open - holding SAVE while just browsing notes may never have
+// touched them this session.
+bool InstrumentClipView::setUpModifiedParamHighlight() {
+	Instrument* instrument = getCurrentInstrument();
+	InstrumentClip* clip = getCurrentInstrumentClip();
+
+	ParamManagerForTimeline* paramManager = nullptr;
+	ModControllableAudio* modControllable = nullptr;
+
+	if (instrument->type == OutputType::KIT) {
+		Drum* selectedDrum = ((Kit*)instrument)->selectedDrum;
+		if (selectedDrum && selectedDrum->type == DrumType::SOUND) {
+			int32_t noteRowIndex;
+			NoteRow* noteRow = clip->getNoteRowForDrum(selectedDrum, &noteRowIndex);
+			if (noteRow) {
+				paramManager = &noteRow->paramManager;
+				modControllable = (SoundDrum*)selectedDrum;
+			}
+		}
+		// No drum selected, or a MIDI/gate drum - not yet covered, same as affect-entire kit FX,
+		// audio clips, and MIDI/CV clips (see issues.md / features.md follow-ups).
+	}
+	else if (instrument->type == OutputType::SYNTH) {
+		paramManager = &clip->paramManager;
+		modControllable = (SoundInstrument*)instrument;
+	}
+
+	if (!paramManager) {
+		return false;
+	}
+
+	soundEditor.currentParamManager = paramManager;
+	soundEditor.currentModControllable = modControllable;
+	return true;
+}
+
+void InstrumentClipView::renderModifiedParamHighlightRow(int32_t yDisplay, RGB* image) {
+	for (int32_t x = 0; x < kDisplayWidth; x++) {
+		MenuItem* item = paramShortcutsForSounds[x][yDisplay];
+		// comingSoonMenu is a sentinel placeholder ((MenuItem*)0xFFFFFFFF, not a real MenuItem) used
+		// in the shortcut table for positions reserved for future params - not caught by a plain
+		// null check, and calling any virtual through it is an invalid access.
+		bool modified = item && item != comingSoonMenu && item->isModifiedFromSaved();
+		image[x] = modified ? colours::white : colours::black;
+	}
+}
+
 void InstrumentClipView::performActualRender(uint32_t whichRows, RGB* image,
                                              uint8_t occupancyMask[][kDisplayWidth + kSideBarWidth], int32_t xScroll,
                                              uint32_t xZoom, int32_t renderWidth, int32_t imageWidth,
                                              bool drawUndefinedArea) {
 	InstrumentClip* clip = getCurrentInstrumentClip();
+
+	bool highlightModifiedParams = isUIModeActive(UI_MODE_HOLDING_SAVE_BUTTON) && !Buttons::isShiftButtonPressed()
+	                               && setUpModifiedParamHighlight();
 
 	char modelStackMemory[MODEL_STACK_MAX_SIZE];
 	ModelStackWithTimelineCounter* modelStack = currentSong->setupModelStackWithCurrentClip(modelStackMemory);
@@ -7347,36 +7407,46 @@ void InstrumentClipView::performActualRender(uint32_t whichRows, RGB* image,
 
 		if (whichRows & (1 << yDisplay)) {
 
-			ModelStackWithNoteRow* modelStackWithNoteRow = clip->getNoteRowOnScreen(yDisplay, modelStack);
-
-			NoteRow* noteRow = modelStackWithNoteRow->getNoteRowAllowNull();
-
 			uint8_t* occupancyMaskOfRow = nullptr;
 			if (occupancyMask) {
 				occupancyMaskOfRow = occupancyMask[yDisplay];
 			}
 
-			// If row doesn't have a NoteRow, wipe it empty
-			if (!noteRow) {
-				std::fill(image, &image[renderWidth], colours::black);
+			if (highlightModifiedParams) {
+				renderModifiedParamHighlightRow(yDisplay, image);
 				if (occupancyMask) {
 					memset(occupancyMaskOfRow, 0, renderWidth);
 				}
 			}
 
-			// Otherwise render the row
 			else {
-				noteRow->renderRow(this, rowColour[yDisplay], rowTailColour[yDisplay], rowBlurColour[yDisplay], image,
-				                   occupancyMaskOfRow, true, modelStackWithNoteRow->getLoopLength(),
-				                   clip->allowNoteTails(modelStackWithNoteRow), renderWidth, xScroll, xZoom, 0,
-				                   renderWidth, false);
-			}
+				ModelStackWithNoteRow* modelStackWithNoteRow = clip->getNoteRowOnScreen(yDisplay, modelStack);
 
-			if (drawUndefinedArea) {
-				int32_t effectiveLength = modelStackWithNoteRow->getLoopLength();
+				NoteRow* noteRow = modelStackWithNoteRow->getNoteRowAllowNull();
 
-				clip->drawUndefinedArea(xScroll, xZoom, effectiveLength, image, occupancyMaskOfRow, renderWidth, this,
-				                        currentSong->tripletsOn); // Sends image pointer for just the one row
+				// If row doesn't have a NoteRow, wipe it empty
+				if (!noteRow) {
+					std::fill(image, &image[renderWidth], colours::black);
+					if (occupancyMask) {
+						memset(occupancyMaskOfRow, 0, renderWidth);
+					}
+				}
+
+				// Otherwise render the row
+				else {
+					noteRow->renderRow(this, rowColour[yDisplay], rowTailColour[yDisplay], rowBlurColour[yDisplay],
+					                   image, occupancyMaskOfRow, true, modelStackWithNoteRow->getLoopLength(),
+					                   clip->allowNoteTails(modelStackWithNoteRow), renderWidth, xScroll, xZoom, 0,
+					                   renderWidth, false);
+				}
+
+				if (drawUndefinedArea) {
+					int32_t effectiveLength = modelStackWithNoteRow->getLoopLength();
+
+					clip->drawUndefinedArea(xScroll, xZoom, effectiveLength, image, occupancyMaskOfRow, renderWidth,
+					                        this,
+					                        currentSong->tripletsOn); // Sends image pointer for just the one row
+				}
 			}
 		}
 

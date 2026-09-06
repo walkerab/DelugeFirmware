@@ -238,6 +238,10 @@ doEndMidiLearnPressSession:
 					currentUIMode = UI_MODE_HOLDING_SAVE_BUTTON;
 					timeSaveButtonPressed = AudioEngine::audioSampleTimer;
 					indicator_leds::setLedState(IndicatorLED::SAVE, true);
+					// InstrumentClipView shows which sound parameters differ from saved while this
+					// is held - force an immediate redraw rather than waiting for the next
+					// unrelated render trigger.
+					uiNeedsRendering(getRootUI(), 0xFFFFFFFF, 0);
 				}
 			}
 
@@ -261,6 +265,8 @@ doEndMidiLearnPressSession:
 					}
 					else {
 						indicator_leds::setLedState(IndicatorLED::SAVE, false);
+						// Restore the normal note grid immediately (see press-down comment above).
+						uiNeedsRendering(getRootUI(), 0xFFFFFFFF, 0);
 					}
 				}
 				else if (currentUIMode == UI_MODE_NONE) {
