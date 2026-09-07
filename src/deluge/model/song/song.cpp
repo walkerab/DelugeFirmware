@@ -1528,6 +1528,15 @@ void Song::resetClipToSaved(Clip* clip) {
 		return;
 	}
 
+	// This frees the clip's existing paramManager/noteRows outright (see restoreSavedContentFrom()
+	// below), so any undo history recorded against them - e.g. ConsequenceParamChange, which holds a
+	// ModelStackWithParamId pointing at the old AutoParam/ParamCollection objects - would otherwise
+	// be left holding dangling pointers. Same policy already used for "load a preset"
+	// (LoadInstrumentPresetUI::opened()) and "load a song" (LoadSongUI): loading from disk isn't
+	// modeled as a revertible delta, so it invalidates prior undo history rather than trying to
+	// integrate with it.
+	actionLogger.deleteAllLogs();
+
 	// Splice the freshly re-parsed clip's saved content into the live clip in place. Locked against
 	// audio rendering for the duration - same guard InstrumentClip::changeInstrument() uses for this
 	// same class of live-clip-restructuring risk (rendering is cooperative, not ISR-driven, so this
