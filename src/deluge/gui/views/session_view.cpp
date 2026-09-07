@@ -3571,6 +3571,15 @@ bool SessionView::createNewTrackForInstrumentClip(OutputType type, InstrumentCli
 		clip->output->setActiveClip(modelStackWithTimelineCounter);
 	}
 
+	// setPresetOrNextUnlaunchedOne() above (SYNTH/KIT) or setNonAudioInstrument() (MIDI/CV) just
+	// loaded a real preset's values into this clip's AutoParams via readFromFile() - but nothing
+	// in that load path sets savedValue to match, so it's stuck at the AutoParam constructor's
+	// default of raw 0 for every param. Without this, a brand new clip (in a brand new song *or*
+	// one added to an existing, already-saved song - the bug doesn't care which) would show false
+	// "modified" markers for any preset value that isn't exactly 0, and "reset clip to saved"
+	// would snap those params back to that meaningless 0 instead of leaving them alone.
+	clip->refreshSavedBaseline();
+
 	return true;
 }
 
@@ -3619,6 +3628,12 @@ InstrumentClip* SessionView::gridCreateInstrumentClipWithNewTrack(OutputType typ
 
 // For safety we set it up the new clip exactly as we want it
 void SessionView::setupNewClip(Clip* newClip) {
+	// Belt-and-suspenders alongside the same call in createNewTrackForInstrumentClip(): this is
+	// the one function every clip-creation path (instrument, audio, list-layout, grid-layout) all
+	// funnel through, so it's a harmless no-op for the already-refreshed instrument case and the
+	// actual fix for audio clips, which don't go through that other call site at all.
+	newClip->refreshSavedBaseline();
+
 	newClip->colourOffset = random(72);
 	newClip->soloingInSessionMode = false;
 	newClip->wasActiveBefore = false;
