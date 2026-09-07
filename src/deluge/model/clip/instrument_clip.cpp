@@ -2464,6 +2464,28 @@ void InstrumentClip::writeDataToFile(Serializer& writer, Song* song) {
 	}
 }
 
+void InstrumentClip::refreshSavedBaseline() {
+	Clip::refreshSavedBaseline();
+	backedUpParamManagerMIDI.refreshSavedBaseline();
+	for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
+		noteRows.getElement(i)->refreshSavedBaseline();
+	}
+
+	// Also refresh the plain (non-AutoParam) settings on the Sound(s) behind this clip - e.g.
+	// mod FX type - mirroring how compensateVolumeForResonance() above reaches the same objects.
+	if (output->type == OutputType::SYNTH) {
+		((SoundInstrument*)output)->refreshSavedBaseline();
+	}
+	else if (output->type == OutputType::KIT) {
+		for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
+			NoteRow* thisNoteRow = noteRows.getElement(i);
+			if (thisNoteRow->drum && thisNoteRow->drum->type == DrumType::SOUND) {
+				((SoundDrum*)thisNoteRow->drum)->refreshSavedBaseline();
+			}
+		}
+	}
+}
+
 Error InstrumentClip::readFromFile(Deserializer& reader, Song* song) {
 
 	Error error;

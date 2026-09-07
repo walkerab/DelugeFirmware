@@ -64,6 +64,9 @@ public:
 	                               bool didPingpong, bool mayInterpolate) = 0;
 	virtual void remotelySwapParamState(AutoParamState* state, ModelStackWithParamId* modelStack) = 0;
 	virtual void deleteAllAutomation(Action* action, ModelStackWithParamCollection* modelStack) = 0;
+	/// Refresh every AutoParam's saved-value baseline (savedValue = currentValue) after a save or load.
+	/// Unlike deleteAllAutomation, this must visit every param unconditionally, not just automated ones.
+	virtual void refreshSavedBaseline() = 0;
 	virtual void nudgeNonInterpolatingNodesAtPos(int32_t pos, int32_t offset, int32_t lengthBeforeLoop, Action* action,
 	                                             ModelStackWithParamCollection* modelStack) = 0;
 	virtual void

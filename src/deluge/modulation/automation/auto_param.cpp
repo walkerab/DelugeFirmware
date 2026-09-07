@@ -55,6 +55,7 @@
 AutoParam::AutoParam() {
 	init();
 	currentValue = 0;
+	savedValue = 0;
 	resetInterpolationIncrement();
 	renewedOverridingAtTime = 0;
 }
@@ -71,6 +72,7 @@ void AutoParam::cloneFrom(AutoParam* otherParam, bool copyAutomation) {
 		nodes.init();
 	}
 	currentValue = otherParam->currentValue;
+	savedValue = currentValue;
 	resetInterpolationIncrement();
 	renewedOverridingAtTime = 0;
 }

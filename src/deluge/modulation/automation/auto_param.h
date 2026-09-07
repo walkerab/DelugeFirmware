@@ -18,6 +18,7 @@
 #pragma once
 #include "definitions_cxx.hpp"
 #include "model/action/action.h"
+#include "modulation/automation/param_value_comparison.h"
 #include "modulation/params/param_node_vector.h"
 #include "storage/storage_manager.h"
 #include <cstdint>
@@ -129,6 +130,13 @@ public:
 
 	/// Current value of the AutoParam. Updated by several functions.
 	int32_t currentValue;
+
+	/// Value of the AutoParam as of the last save or load, whichever is most recent. Used to show a
+	/// "modified since saved" indicator; kept in sync by \ref refreshSavedValue.
+	int32_t savedValue;
+
+	inline void refreshSavedValue() { savedValue = currentValue; }
+	inline bool isModifiedFromSaved() { return valueDiffersFromSaved(currentValue, savedValue); }
 
 	// interpolation to calculate current value
 	bool hasInterpolationIncrement();

@@ -448,6 +448,10 @@ couldntLoad:
 	newInstrument->loadAllAudioFiles(true);
 
 	firstClip->setAudioInstrument(newInstrument, this, true, &newParamManager);
+	// This paramManager was just populated from a preset file (or factory defaults), not edited by the
+	// user, so its "modified since saved" baseline should start clean rather than inheriting whatever
+	// stale savedValue AutoParam's constructor left behind.
+	firstClip->refreshSavedBaseline();
 	// TODO: error checking?
 	addOutput(newInstrument);
 
@@ -1406,6 +1410,24 @@ weAreInArrangementEditorOrInClipInstance:
 	writer.writeClosingTag("scales");
 
 	writer.writeClosingTag("song", true, true);
+}
+
+void Song::refreshSavedBaseline() {
+	paramManager.refreshSavedBaseline();
+	globalEffectable.refreshSavedBaseline();
+	AudioEngine::reverbSidechain.refreshSavedBaseline();
+
+	for (int32_t c = 0; c < sessionClips.getNumElements(); c++) {
+		sessionClips.getClipAtIndex(c)->refreshSavedBaseline();
+	}
+	for (int32_t c = 0; c < arrangementOnlyClips.getNumElements(); c++) {
+		arrangementOnlyClips.getClipAtIndex(c)->refreshSavedBaseline();
+	}
+
+	for (int32_t i = 0; i < backedUpParamManagers.getNumElements(); i++) {
+		auto* backedUp = (BackedUpParamManager*)backedUpParamManagers.getElementAddress(i);
+		backedUp->paramManager.refreshSavedBaseline();
+	}
 }
 
 Error Song::readFromFile(Deserializer& reader) {

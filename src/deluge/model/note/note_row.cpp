@@ -3694,6 +3694,10 @@ void NoteRow::writeToFile(Serializer& writer, int32_t drumIndex, InstrumentClip*
 	}
 }
 
+void NoteRow::refreshSavedBaseline() {
+	paramManager.refreshSavedBaseline();
+}
+
 int8_t NoteRow::getColourOffset(InstrumentClip* clip) {
 	if (clip->output->type == OutputType::KIT) {
 		return colourOffset;
