@@ -114,8 +114,6 @@ public:
 	void resumePlayback(ModelStackWithNoteRow* modelStack, bool clipMayMakeSound);
 	void writeToFile(Serializer& writer, int32_t drumIndex, InstrumentClip* clip);
 	Error readFromFile(Deserializer& reader, int32_t*, InstrumentClip*, Song* song, int32_t readAutomationUpToPos);
-	void refreshSavedBaseline();
-	void resetToSavedBaseline();
 	inline int32_t getNoteCode() { return y; }
 	void writeToFlash();
 	void readFromFlash(InstrumentClip* parentClip);

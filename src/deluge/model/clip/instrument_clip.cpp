@@ -2464,45 +2464,51 @@ void InstrumentClip::writeDataToFile(Serializer& writer, Song* song) {
 	}
 }
 
-void InstrumentClip::refreshSavedBaseline() {
-	Clip::refreshSavedBaseline();
-	backedUpParamManagerMIDI.refreshSavedBaseline();
-	for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
-		noteRows.getElement(i)->refreshSavedBaseline();
-	}
+void InstrumentClip::restoreSavedContentFrom(Clip* savedClip, ModelStackWithTimelineCounter* modelStack) {
+	auto* savedInstrumentClip = (InstrumentClip*)savedClip;
 
-	// Also refresh the plain (non-AutoParam) settings on the Sound(s) behind this clip - e.g.
-	// mod FX type - mirroring how compensateVolumeForResonance() above reaches the same objects.
-	if (output->type == OutputType::SYNTH) {
-		((SoundInstrument*)output)->refreshSavedBaseline();
-	}
-	else if (output->type == OutputType::KIT) {
-		for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
-			NoteRow* thisNoteRow = noteRows.getElement(i);
-			if (thisNoteRow->drum && thisNoteRow->drum->type == DrumType::SOUND) {
-				((SoundDrum*)thisNoteRow->drum)->refreshSavedBaseline();
-			}
+	Clip::restoreSavedContentFrom(savedClip, modelStack);
+
+	backedUpParamManagerMIDI.destructAndForgetParamCollections();
+	backedUpParamManagerMIDI.cloneParamCollectionsFrom(&savedInstrumentClip->backedUpParamManagerMIDI, true, true);
+
+	// Notes + automation: free what's currently here, then deep-clone the freshly re-parsed rows in.
+	// noteRows.cloneFrom() copies the NoteRow structs themselves into fresh memory, but each row's
+	// own owned sub-containers (paramManager, notes) still alias the source clip's memory until
+	// beenCloned() is called per row - same two-step sequence InstrumentClip::clone() already uses.
+	noteRows.deleteNoteRowAtIndex(0, noteRows.getNumElements());
+	noteRows.cloneFrom(&savedInstrumentClip->noteRows);
+
+	bool isKit = (output->type == OutputType::KIT);
+	Kit* liveKit = isKit ? (Kit*)output : nullptr;
+
+	for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
+		NoteRow* noteRow = noteRows.getElement(i);
+		int32_t noteRowId = getNoteRowId(noteRow, i);
+		ModelStackWithNoteRow* modelStackWithNoteRow = modelStack->addNoteRow(noteRowId, noteRow);
+		noteRow->beenCloned(modelStackWithNoteRow, false);
+
+		// noteRow->drum still points into the scratch song's disposable Kit at this point (copied
+		// verbatim by the raw NoteRow struct clone above) - re-resolve it against the live Kit's
+		// drums by name before the scratch song goes away, same pattern
+		// InstrumentClip::changeInstrument() uses to reattach rows to a different kit's drums.
+		if (isKit) {
+			noteRow->drum = noteRow->drum ? liveKit->getDrumFromName(noteRow->drum->drumName) : nullptr;
 		}
 	}
-}
 
-void InstrumentClip::resetToSavedBaseline() {
-	Clip::resetToSavedBaseline();
-	backedUpParamManagerMIDI.resetToSavedBaseline();
-	for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
-		noteRows.getElement(i)->resetToSavedBaseline();
-	}
-
-	// Mirrors refreshSavedBaseline() above: also reset the plain (non-AutoParam) settings on the
-	// Sound(s) behind this clip.
+	// Also restore the plain (non-AutoParam) settings on the Sound(s) behind this clip - e.g. mod FX
+	// type, filter mode - from the corresponding Sound(s) in the freshly re-parsed clip.
 	if (output->type == OutputType::SYNTH) {
-		((SoundInstrument*)output)->resetToSavedBaseline();
+		((SoundInstrument*)output)->resetToSavedBaseline((SoundInstrument*)savedInstrumentClip->output);
 	}
-	else if (output->type == OutputType::KIT) {
+	else if (isKit) {
 		for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
 			NoteRow* thisNoteRow = noteRows.getElement(i);
-			if (thisNoteRow->drum && thisNoteRow->drum->type == DrumType::SOUND) {
-				((SoundDrum*)thisNoteRow->drum)->resetToSavedBaseline();
+			NoteRow* savedNoteRow = savedInstrumentClip->noteRows.getElement(i);
+			if (thisNoteRow->drum && thisNoteRow->drum->type == DrumType::SOUND && savedNoteRow->drum
+			    && savedNoteRow->drum->type == DrumType::SOUND) {
+				((SoundDrum*)thisNoteRow->drum)->resetToSavedBaseline((SoundDrum*)savedNoteRow->drum);
 			}
 		}
 	}

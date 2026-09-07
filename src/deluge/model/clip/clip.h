@@ -130,8 +130,12 @@ public:
 	virtual char const* getXMLTag() = 0;
 	virtual Error readFromFile(Deserializer& reader, Song* song) = 0;
 	void readTagFromFile(Deserializer& reader, char const* tagName, Song* song, int32_t* readAutomationUpToPos);
-	virtual void refreshSavedBaseline();
-	virtual void resetToSavedBaseline();
+
+	/// Splice this clip's paramManager (params + automation) from a freshly re-parsed copy of the
+	/// same clip read back from the song's saved XML file ("reset clip to saved" - see
+	/// Song::resetClipToSaved()). InstrumentClip additionally splices noteRows. modelStack must
+	/// wrap this (live) clip, not savedClip.
+	virtual void restoreSavedContentFrom(Clip* savedClip, ModelStackWithTimelineCounter* modelStack);
 
 	virtual void copyBasicsFrom(Clip const* otherClip);
 	void setupForRecordingAsAutoOverdub(Clip* existingClip, Song* song, OverDubType newOverdubNature);
@@ -195,6 +199,15 @@ public:
 	int32_t repeatCount;
 
 	uint32_t indexForSaving; // For use only while saving song
+
+	/// Sentinel for lastSavedIndex: this clip has never been through a save or load, so there's
+	/// nothing on disk to reset it to.
+	static constexpr uint32_t kNeverSaved = 0xFFFFFFFF;
+
+	/// This clip's position among its own track's clips as of the last save or load, whichever is
+	/// most recent (not a live/current position - see Song::resetClipToSaved()). Distinct from
+	/// indexForSaving, which is scratch-only and only valid mid-save.
+	uint32_t lastSavedIndex{kNeverSaved};
 
 	LaunchStyle launchStyle;
 	int64_t fillEventAtTickCount;

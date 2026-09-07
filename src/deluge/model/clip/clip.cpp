@@ -657,12 +657,9 @@ void Clip::writeToFile(Serializer& writer, Song* song) {
 	writer.writeClosingTag(xmlTag, true, true);
 }
 
-void Clip::refreshSavedBaseline() {
-	paramManager.refreshSavedBaseline();
-}
-
-void Clip::resetToSavedBaseline() {
-	paramManager.resetToSavedBaseline();
+void Clip::restoreSavedContentFrom(Clip* savedClip, ModelStackWithTimelineCounter* modelStack) {
+	paramManager.destructAndForgetParamCollections();
+	paramManager.cloneParamCollectionsFrom(&savedClip->paramManager, true, true);
 }
 
 void Clip::writeDataToFile(Serializer& writer, Song* song) {

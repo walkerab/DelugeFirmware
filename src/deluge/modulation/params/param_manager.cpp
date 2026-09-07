@@ -285,22 +285,6 @@ void ParamManager::destructAndForgetParamCollections() {
 	expressionParamSetOffset = 0;
 }
 
-void ParamManager::refreshSavedBaseline() {
-	ParamCollectionSummary* summary = summaries;
-	while (summary->paramCollection) {
-		summary->paramCollection->refreshSavedBaseline();
-		summary++;
-	}
-}
-
-void ParamManager::resetToSavedBaseline() {
-	ParamCollectionSummary* summary = summaries;
-	while (summary->paramCollection) {
-		summary->paramCollection->resetToSavedBaseline();
-		summary++;
-	}
-}
-
 // Returns whether there is one / one could be created.
 bool ParamManager::ensureExpressionParamSetExists(bool forDrum) {
 	int32_t offset = getExpressionParamSetOffset();

@@ -82,7 +82,6 @@ add_executable(UnitTests
         default_name_tests.cpp
         rgb_tests.cpp
         notes_state_tests.cpp
-        modified_from_saved_tests.cpp
 )
 add_test(NAME UnitTests
         COMMAND UnitTests)

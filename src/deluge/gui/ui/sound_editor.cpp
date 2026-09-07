@@ -506,11 +506,8 @@ ActionResult SoundEditor::buttonAction(deluge::hid::Button b, bool on, bool inCa
 			if (inCardRoutine) {
 				return ActionResult::REMIND_ME_OUTSIDE_CARD_ROUTINE;
 			}
-			getCurrentInstrumentClip()->resetToSavedBaseline();
-			AudioEngine::mustUpdateReverbParamsBeforeNextRender = true;
-			display->displayPopup(deluge::l10n::get(deluge::l10n::String::STRING_FOR_CLIP_RESET_TO_SAVED));
-			// Redraw the current param screen so its modified-marker immediately reflects that
-			// nothing's modified anymore.
+			currentSong->resetClipToSaved(getCurrentInstrumentClip());
+			// Redraw the current param screen so it reflects the values just reset.
 			renderUIsForOled();
 		}
 	}

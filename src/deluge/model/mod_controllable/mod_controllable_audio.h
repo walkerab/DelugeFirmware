@@ -72,32 +72,18 @@ public:
 	virtual ModFXType getModFXType() = 0;
 	virtual bool setModFXType(ModFXType newType);
 
-	/// Value of modFXType_ as of the last save or load, whichever is most recent - same "modified
-	/// since saved" concept as AutoParam::savedValue, for the plain (non-AutoParam) settings on
-	/// this class. Piecemeal: only modFXType_ is covered so far.
-	inline void refreshSavedBaseline() {
-		modFXType_saved_ = modFXType_;
-		clippingAmount_saved_ = clippingAmount;
-		lpfMode_saved_ = lpfMode;
-		hpfMode_saved_ = hpfMode;
-		sidechain.refreshSavedBaseline();
-	}
-	inline bool isModFXTypeModifiedFromSaved() { return modFXType_ != modFXType_saved_; }
-	inline bool isClippingAmountModifiedFromSaved() { return clippingAmount != clippingAmount_saved_; }
-	inline bool isLpfModeModifiedFromSaved() { return lpfMode != lpfMode_saved_; }
-	inline bool isHpfModeModifiedFromSaved() { return hpfMode != hpfMode_saved_; }
-
-	/// The reverse of refreshSavedBaseline(): reset the plain (non-AutoParam) settings on this
-	/// class back to their saved baseline ("Reset clip to saved"). Goes through setModFXType()
-	/// (virtual - Sound overrides it to set up/tear down the mod-fx processing buffer/grain
-	/// engine for the new type) rather than assigning modFXType_ directly, so switching types via
-	/// reset gets the same buffer handling a normal menu-driven type change would.
-	inline void resetToSavedBaseline() {
-		setModFXType(modFXType_saved_);
-		clippingAmount = clippingAmount_saved_;
-		lpfMode = lpfMode_saved_;
-		hpfMode = hpfMode_saved_;
-		sidechain.resetToSavedBaseline();
+	/// Reset the plain (non-AutoParam) settings on this class to match a freshly re-parsed copy of
+	/// the same track's Sound read back from the song's saved XML file ("reset clip to saved" - see
+	/// Song::resetClipToSaved()). Goes through setModFXType() (virtual - Sound overrides it to set
+	/// up/tear down the mod-fx processing buffer/grain engine for the new type) rather than
+	/// assigning modFXType_ directly, so switching types via reset gets the same buffer handling a
+	/// normal menu-driven type change would.
+	inline void resetToSavedBaseline(ModControllableAudio* saved) {
+		setModFXType(saved->modFXType_);
+		clippingAmount = saved->clippingAmount;
+		lpfMode = saved->lpfMode;
+		hpfMode = saved->hpfMode;
+		sidechain.resetToSavedBaseline(&saved->sidechain);
 	}
 	bool offerReceivedCCToLearnedParamsForClip(MIDICable& cable, uint8_t channel, uint8_t ccNumber, uint8_t value,
 	                                           ModelStackWithTimelineCounter* modelStack, int32_t noteRowIndex = -1);
@@ -133,16 +119,12 @@ public:
 
 	bool sampleRateReductionOnLastTime;
 	uint8_t clippingAmount; // Song probably doesn't currently use this?
-	uint8_t clippingAmount_saved_{0};
 	FilterMode lpfMode;
-	FilterMode lpfMode_saved_{FilterMode::OFF};
 	FilterMode hpfMode;
-	FilterMode hpfMode_saved_{FilterMode::OFF};
 	FilterRoute filterRoute;
 
 	// Mod FX
 	ModFXType modFXType_;
-	ModFXType modFXType_saved_{ModFXType::NONE};
 	ModFXProcessor modfx{};
 	RMSFeedbackCompressor compressor;
 	GranularProcessor* grainFX{nullptr};

@@ -64,12 +64,6 @@ public:
 	                               bool didPingpong, bool mayInterpolate) = 0;
 	virtual void remotelySwapParamState(AutoParamState* state, ModelStackWithParamId* modelStack) = 0;
 	virtual void deleteAllAutomation(Action* action, ModelStackWithParamCollection* modelStack) = 0;
-	/// Refresh every AutoParam's saved-value baseline (savedValue = currentValue) after a save or load.
-	/// Unlike deleteAllAutomation, this must visit every param unconditionally, not just automated ones.
-	virtual void refreshSavedBaseline() = 0;
-	/// The reverse of refreshSavedBaseline(): reset every AutoParam's live value back to its saved
-	/// baseline ("Reset clip to saved"). Same unconditional-visit shape.
-	virtual void resetToSavedBaseline() = 0;
 	virtual void nudgeNonInterpolatingNodesAtPos(int32_t pos, int32_t offset, int32_t lengthBeforeLoop, Action* action,
 	                                             ModelStackWithParamCollection* modelStack) = 0;
 	virtual void

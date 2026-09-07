@@ -414,15 +414,7 @@ ActionResult InstrumentClipView::buttonAction(deluge::hid::Button b, bool on, bo
 	// reset clip to saved when pressing clip view while holding load
 	else if (b == CLIP_VIEW && currentUIMode == UI_MODE_HOLDING_LOAD_BUTTON) {
 		if (on) {
-			getCurrentInstrumentClip()->resetToSavedBaseline();
-			AudioEngine::mustUpdateReverbParamsBeforeNextRender = true;
-			// Still holding LOAD - refresh so the modified-param grid highlight immediately
-			// reflects that nothing's modified anymore, same trigger View::buttonAction() uses
-			// when SAVE itself is pressed/released (the grid highlight keys off SAVE's hold mode,
-			// not LOAD's - this reset doesn't turn the highlight on, just needs it to catch up if
-			// it's already showing from a moment ago).
-			uiNeedsRendering(getRootUI(), 0xFFFFFFFF, 0);
-			display->displayPopup(deluge::l10n::get(deluge::l10n::String::STRING_FOR_CLIP_RESET_TO_SAVED));
+			currentSong->resetClipToSaved(getCurrentInstrumentClip());
 			return ActionResult::DEALT_WITH;
 		}
 	}

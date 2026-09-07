@@ -40,7 +40,9 @@
 #include "model/clip/clip_instance.h"
 #include "model/clip/instrument_clip.h"
 #include "model/consequence/consequence_clip_existence.h"
+#include "model/global_effectable/global_effectable.h"
 #include "model/instrument/cv_instrument.h"
+#include "model/instrument/instrument.h"
 #include "model/instrument/midi_instrument.h"
 #include "model/mod_controllable/mod_controllable_audio.h"
 #include "model/sample/sample_recorder.h"
@@ -448,10 +450,6 @@ couldntLoad:
 	newInstrument->loadAllAudioFiles(true);
 
 	firstClip->setAudioInstrument(newInstrument, this, true, &newParamManager);
-	// This paramManager was just populated from a preset file (or factory defaults), not edited by the
-	// user, so its "modified since saved" baseline should start clean rather than inheriting whatever
-	// stale savedValue AutoParam's constructor left behind.
-	firstClip->refreshSavedBaseline();
 	// TODO: error checking?
 	addOutput(newInstrument);
 
@@ -1412,22 +1410,144 @@ weAreInArrangementEditorOrInClipInstance:
 	writer.writeClosingTag("song", true, true);
 }
 
-void Song::refreshSavedBaseline() {
-	paramManager.refreshSavedBaseline();
-	globalEffectable.refreshSavedBaseline();
-	AudioEngine::reverbSidechain.refreshSavedBaseline();
-
-	for (int32_t c = 0; c < sessionClips.getNumElements(); c++) {
-		sessionClips.getClipAtIndex(c)->refreshSavedBaseline();
-	}
-	for (int32_t c = 0; c < arrangementOnlyClips.getNumElements(); c++) {
-		arrangementOnlyClips.getClipAtIndex(c)->refreshSavedBaseline();
+void Song::resetClipToSaved(Clip* clip) {
+	if (clip->lastSavedIndex == Clip::kNeverSaved) {
+		display->displayPopup(deluge::l10n::get(deluge::l10n::String::STRING_FOR_CLIP_NEVER_SAVED));
+		return;
 	}
 
-	for (int32_t i = 0; i < backedUpParamManagers.getNumElements(); i++) {
-		auto* backedUp = (BackedUpParamManager*)backedUpParamManagers.getElementAddress(i);
-		backedUp->paramManager.refreshSavedBaseline();
+	// Build the path to this song's own saved file - same fields SaveSongUI::opened() reads to
+	// resolve "the file I'll overwrite if I hit save again". Try both formats since we don't have
+	// direct access to the browser UI's writeJsonFlag from here.
+	String basePath;
+	basePath.set(&dirPath);
+	Error error = basePath.concatenate("/");
+	if (error == Error::NONE) {
+		error = basePath.concatenate(&name);
 	}
+	if (error != Error::NONE) {
+		display->displayError(error);
+		return;
+	}
+
+	String xmlPath;
+	xmlPath.set(&basePath);
+	xmlPath.concatenate(".XML");
+	String jsonPath;
+	jsonPath.set(&basePath);
+	jsonPath.concatenate(".Json");
+
+	FilePointer fp;
+	bool isJson = false;
+	if (!StorageManager::fileExists(xmlPath.get(), &fp)) {
+		if (!StorageManager::fileExists(jsonPath.get(), &fp)) {
+			display->displayPopup(deluge::l10n::get(deluge::l10n::String::STRING_FOR_CLIP_NOT_IN_SAVED_FILE));
+			return;
+		}
+		isJson = true;
+	}
+
+	void* scratchSongMemory = GeneralMemoryAllocator::get().allocMaxSpeed(sizeof(Song));
+	if (!scratchSongMemory) {
+		display->displayError(Error::INSUFFICIENT_RAM);
+		return;
+	}
+	auto* scratchSong = new (scratchSongMemory) Song();
+	error = scratchSong->paramManager.setupUnpatched();
+	if (error == Error::NONE) {
+		GlobalEffectable::initParams(&scratchSong->paramManager);
+		if (isJson) {
+			error = StorageManager::openJsonFile(&fp, smJsonDeserializer, "song");
+			if (error == Error::NONE) {
+				error = scratchSong->readFromFile(smJsonDeserializer);
+				smJsonDeserializer.closeWriter();
+			}
+		}
+		else {
+			error = StorageManager::openXMLFile(&fp, smDeserializer, "song");
+			if (error == Error::NONE) {
+				error = scratchSong->readFromFile(smDeserializer);
+				smDeserializer.closeWriter();
+			}
+		}
+	}
+
+	if (error != Error::NONE) {
+		scratchSong->~Song();
+		delugeDealloc(scratchSongMemory);
+		display->displayError(error);
+		return;
+	}
+
+	// Locate the matching track by identity - the same matching the normal loader already uses to
+	// reattach a freshly-parsed clip to an existing live track, just run here against the scratch
+	// song's freshly-parsed tracks instead.
+	Output* liveOutput = clip->output;
+	Output* matchedOutput = nullptr;
+
+	if (liveOutput->type == OutputType::AUDIO) {
+		matchedOutput = scratchSong->getAudioOutputFromName(liveOutput->name.get());
+	}
+	else {
+		int32_t channel = 0;
+		int32_t channelSuffix = 0;
+		char const* dirPathForMatch = "";
+		if (liveOutput->type == OutputType::SYNTH || liveOutput->type == OutputType::KIT) {
+			dirPathForMatch = ((Instrument*)liveOutput)->dirPath.get();
+		}
+		else if (liveOutput->type == OutputType::MIDI_OUT) {
+			auto* midi = (MIDIInstrument*)liveOutput;
+			channel = midi->getChannel();
+			channelSuffix = midi->channelSuffix;
+		}
+		else if (liveOutput->type == OutputType::CV) {
+			channel = ((CVInstrument*)liveOutput)->getChannel();
+		}
+		matchedOutput = scratchSong->getInstrumentFromPresetSlot(liveOutput->type, channel, channelSuffix,
+		                                                         liveOutput->name.get(), dirPathForMatch, false);
+	}
+
+	// Locate the clip on that track whose lastSavedIndex matches.
+	Clip* foundClip = nullptr;
+	if (matchedOutput) {
+		ClipArray& scratchArray =
+		    clip->isArrangementOnlyClip() ? scratchSong->arrangementOnlyClips : scratchSong->sessionClips;
+		for (int32_t c = 0; c < scratchArray.getNumElements(); c++) {
+			Clip* candidate = scratchArray.getClipAtIndex(c);
+			if (candidate->output == matchedOutput && candidate->lastSavedIndex == clip->lastSavedIndex) {
+				foundClip = candidate;
+				break;
+			}
+		}
+	}
+
+	if (!foundClip) {
+		scratchSong->~Song();
+		delugeDealloc(scratchSongMemory);
+		display->displayPopup(deluge::l10n::get(deluge::l10n::String::STRING_FOR_CLIP_NOT_IN_SAVED_FILE));
+		return;
+	}
+
+	// Splice the freshly re-parsed clip's saved content into the live clip in place. Locked against
+	// audio rendering for the duration - same guard InstrumentClip::changeInstrument() uses for this
+	// same class of live-clip-restructuring risk (rendering is cooperative, not ISR-driven, so this
+	// is sufficient as long as nothing in here yields back into the scheduler).
+	AudioEngine::audioRoutineLocked = true;
+
+	char modelStackMemory[MODEL_STACK_MAX_SIZE];
+	ModelStack* modelStack = setupModelStackWithSong(modelStackMemory, this);
+	ModelStackWithTimelineCounter* modelStackWithTimelineCounter = modelStack->addTimelineCounter(clip);
+
+	clip->restoreSavedContentFrom(foundClip, modelStackWithTimelineCounter);
+
+	AudioEngine::audioRoutineLocked = false;
+
+	scratchSong->~Song();
+	delugeDealloc(scratchSongMemory);
+
+	AudioEngine::mustUpdateReverbParamsBeforeNextRender = true;
+	uiNeedsRendering(getRootUI(), 0xFFFFFFFF, 0xFFFFFFFF);
+	display->displayPopup(deluge::l10n::get(deluge::l10n::String::STRING_FOR_CLIP_RESET_TO_SAVED));
 }
 
 Error Song::readFromFile(Deserializer& reader) {
@@ -2160,6 +2280,11 @@ loadOutput:
 	    &arrangementOnlyClips,
 	};
 	for (ClipArray* clipArray : arrays) {
+		// Fresh per-track numbering for each array (session vs arrangement-only), mirroring
+		// setupClipIndexesForSaving() - see Clip::lastSavedIndex / Song::resetClipToSaved().
+		for (Output* output = firstOutput; output; output = output->next) {
+			output->clipCountForSavingOrLoadingTemp = 0;
+		}
 		for (int32_t c = 0; c < clipArray->getNumElements(); c++) {
 			Clip* thisClip = clipArray->getClipAtIndex(c); // TODO: deal with other Clips too!
 
@@ -2175,6 +2300,8 @@ loadOutput:
 			if (error != Error::NONE) {
 				return error;
 			}
+
+			thisClip->lastSavedIndex = thisClip->output->clipCountForSavingOrLoadingTemp++;
 
 			// Correct different non-synced rates of old song files
 			// In a perfect world, we'd do this for Kits, MIDI and CV too
@@ -5098,12 +5225,22 @@ void Song::setupClipIndexesForSaving() {
 	// For each Clip in session and arranger
 	ClipArray* clipArray = &sessionClips;
 	int32_t sessionIndex = 0;
+	for (Output* output = firstOutput; output; output = output->next) {
+		output->clipCountForSavingOrLoadingTemp = 0;
+	}
 	for (Clip* clip : AllClips::inSession(this)) {
 		clip->indexForSaving = sessionIndex++;
+		// lastSavedIndex: this clip's position among its own track's clips, as of this save - see
+		// Song::resetClipToSaved().
+		clip->lastSavedIndex = clip->output->clipCountForSavingOrLoadingTemp++;
+	}
+	for (Output* output = firstOutput; output; output = output->next) {
+		output->clipCountForSavingOrLoadingTemp = 0;
 	}
 	int32_t arrangerOnlyIndex = 0;
 	for (Clip* clip : AllClips::inArrangementOnly(this)) {
 		clip->indexForSaving = arrangerOnlyIndex++;
+		clip->lastSavedIndex = clip->output->clipCountForSavingOrLoadingTemp++;
 	}
 }
 

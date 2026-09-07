@@ -198,20 +198,6 @@ void MIDIParamCollection::deleteAllAutomation(Action* action, ModelStackWithPara
 	}
 }
 
-void MIDIParamCollection::refreshSavedBaseline() {
-	for (int32_t i = 0; i < params.getNumElements(); i++) {
-		MIDIParam* midiParam = params.getElement(i);
-		midiParam->param.refreshSavedValue();
-	}
-}
-
-void MIDIParamCollection::resetToSavedBaseline() {
-	for (int32_t i = 0; i < params.getNumElements(); i++) {
-		MIDIParam* midiParam = params.getElement(i);
-		midiParam->param.resetToSavedValue();
-	}
-}
-
 ModelStackWithAutoParam* MIDIParamCollection::getAutoParamFromId(ModelStackWithParamId* modelStack,
                                                                  bool allowCreation) {
 	int32_t defaultValue = 0;

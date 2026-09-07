@@ -45,8 +45,6 @@ SideChain::SideChain() {
 		syncLevel = (SyncLevel)(7 - FlashStorage::defaultMagnitude);
 	}
 	syncType = SYNC_TYPE_EVEN;
-
-	refreshSavedBaseline();
 }
 
 void SideChain::cloneFrom(SideChain* other) {
@@ -54,7 +52,6 @@ void SideChain::cloneFrom(SideChain* other) {
 	release = other->release;
 	syncType = other->syncType;
 	syncLevel = other->syncLevel;
-	refreshSavedBaseline();
 }
 
 void SideChain::registerHit(int32_t strength) {

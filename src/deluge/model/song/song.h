@@ -277,7 +277,11 @@ public:
 	Clip* getClipWithOutput(Output* output, bool mustBeActive = false, Clip* excludeClip = nullptr);
 	Error readFromFile(Deserializer& reader);
 	void writeToFile();
-	void refreshSavedBaseline();
+	/// "Reset clip to saved": re-parse this song's own saved XML file into a disposable scratch
+	/// Song, locate the same clip within it (by track identity + Clip::lastSavedIndex), and splice
+	/// its saved params/notes/automation into the live clip. No-op (with a popup) if the clip has
+	/// never been saved (Clip::kNeverSaved) or can't be found in the file.
+	void resetClipToSaved(Clip* clip);
 	void loadAllSamples(bool mayActuallyReadFiles = true);
 	void renderAudio(std::span<StereoSample> outputBuffer, int32_t* reverbBuffer, int32_t sideChainHitPending);
 	bool isYNoteAllowed(int32_t yNote, bool inKeyMode);

@@ -413,9 +413,6 @@ gotErrorAfterCreatingSong:
 	}
 	AudioEngine::logAction("read new song from file");
 
-	// Every parameter now holds exactly what was in the file, so that's the "modified since saved" baseline.
-	preLoadedSong->refreshSavedBaseline();
-
 	FRESULT success = activeDeserializer->closeWriter();
 	if (success != FR_OK) {
 		display->displayPopup(deluge::l10n::get(deluge::l10n::String::STRING_FOR_ERROR_LOADING_SONG));

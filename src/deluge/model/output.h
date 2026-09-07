@@ -110,6 +110,11 @@ public:
 
 	bool nextClipFoundShouldGetArmed; // Temp thing for Session::armClipsToStartOrSoloWithQuantization
 
+	// Temp thing for Song::setupClipIndexesForSaving()/Song::readClipsFromFile(): running count of
+	// this track's own clips seen so far during the current save or load pass, used to stamp
+	// Clip::lastSavedIndex. Valid only during that single pass.
+	uint32_t clipCountForSavingOrLoadingTemp;
+
 	// reverbAmountAdjust has "1" as 67108864
 	// Only gets called if there's an activeClip
 	virtual void renderOutput(ModelStack* modelStack, std::span<StereoSample> outputBuffer, int32_t* reverbBuffer,

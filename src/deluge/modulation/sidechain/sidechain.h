@@ -47,30 +47,15 @@ public:
 	void registerHit(int32_t strength);
 	void registerHitRetrospectively(int32_t strength, uint32_t numSamplesAgo);
 
-	/// "Modified from saved" baseline for attack/sync, same concept as AutoParam::savedValue -
-	/// attack/release/syncType/syncLevel are plain fields, not AutoParams, so they need their own
-	/// shadow copy (same pattern as ModControllableAudio::modFXType_saved_).
-	inline void refreshSavedBaseline() {
-		attack_saved_ = attack;
-		syncType_saved_ = syncType;
-		syncLevel_saved_ = syncLevel;
-	}
-	inline bool isAttackModifiedFromSaved() const { return attack != attack_saved_; }
-	inline bool isSyncModifiedFromSaved() const { return syncType != syncType_saved_ || syncLevel != syncLevel_saved_; }
-
-	/// The reverse of refreshSavedBaseline(): reset attack/sync back to their saved baseline
-	/// ("Reset clip to saved").
-	inline void resetToSavedBaseline() {
-		attack = attack_saved_;
-		syncType = syncType_saved_;
-		syncLevel = syncLevel_saved_;
+	/// Reset attack/sync to match a freshly re-parsed copy of the same track's SideChain read back
+	/// from the song's saved XML file ("reset clip to saved" - see Song::resetClipToSaved()).
+	inline void resetToSavedBaseline(SideChain* saved) {
+		attack = saved->attack;
+		syncType = saved->syncType;
+		syncLevel = saved->syncLevel;
 	}
 
 private:
 	int32_t getActualAttackRate();
 	int32_t getActualReleaseRate();
-
-	int32_t attack_saved_{0};
-	SyncType syncType_saved_{SYNC_TYPE_EVEN};
-	SyncLevel syncLevel_saved_{SYNC_LEVEL_NONE};
 };
