@@ -78,10 +78,14 @@ public:
 	inline void refreshSavedBaseline() {
 		modFXType_saved_ = modFXType_;
 		clippingAmount_saved_ = clippingAmount;
+		lpfMode_saved_ = lpfMode;
+		hpfMode_saved_ = hpfMode;
 		sidechain.refreshSavedBaseline();
 	}
 	inline bool isModFXTypeModifiedFromSaved() { return modFXType_ != modFXType_saved_; }
 	inline bool isClippingAmountModifiedFromSaved() { return clippingAmount != clippingAmount_saved_; }
+	inline bool isLpfModeModifiedFromSaved() { return lpfMode != lpfMode_saved_; }
+	inline bool isHpfModeModifiedFromSaved() { return hpfMode != hpfMode_saved_; }
 
 	/// The reverse of refreshSavedBaseline(): reset the plain (non-AutoParam) settings on this
 	/// class back to their saved baseline ("Reset clip to saved"). Goes through setModFXType()
@@ -91,6 +95,8 @@ public:
 	inline void resetToSavedBaseline() {
 		setModFXType(modFXType_saved_);
 		clippingAmount = clippingAmount_saved_;
+		lpfMode = lpfMode_saved_;
+		hpfMode = hpfMode_saved_;
 		sidechain.resetToSavedBaseline();
 	}
 	bool offerReceivedCCToLearnedParamsForClip(MIDICable& cable, uint8_t channel, uint8_t ccNumber, uint8_t value,
@@ -129,7 +135,9 @@ public:
 	uint8_t clippingAmount; // Song probably doesn't currently use this?
 	uint8_t clippingAmount_saved_{0};
 	FilterMode lpfMode;
+	FilterMode lpfMode_saved_{FilterMode::OFF};
 	FilterMode hpfMode;
+	FilterMode hpfMode_saved_{FilterMode::OFF};
 	FilterRoute filterRoute;
 
 	// Mod FX

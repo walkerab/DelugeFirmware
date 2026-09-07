@@ -59,6 +59,10 @@ public:
 		}
 	}
 	bool wrapAround() override { return display->have7SEG(); }
+	bool isModifiedFromSaved() override {
+		return info.getSlot() == FilterSlot::HPF ? soundEditor.currentModControllable->isHpfModeModifiedFromSaved()
+		                                         : soundEditor.currentModControllable->isLpfModeModifiedFromSaved();
+	}
 	deluge::vector<std::string_view> getOptions(OptType optType) override {
 		using enum l10n::String;
 		bool shortOpt = optType == OptType::SHORT;
