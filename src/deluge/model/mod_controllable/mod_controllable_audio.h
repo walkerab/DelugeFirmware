@@ -71,6 +71,20 @@ public:
 	void endStutter(ParamManagerForTimeline* paramManager);
 	virtual ModFXType getModFXType() = 0;
 	virtual bool setModFXType(ModFXType newType);
+
+	/// Reset the plain (non-AutoParam) settings on this class to match a freshly re-parsed copy of
+	/// the same track's Sound read back from the song's saved XML file ("reset clip to saved" - see
+	/// Song::resetClipToSaved()). Goes through setModFXType() (virtual - Sound overrides it to set
+	/// up/tear down the mod-fx processing buffer/grain engine for the new type) rather than
+	/// assigning modFXType_ directly, so switching types via reset gets the same buffer handling a
+	/// normal menu-driven type change would.
+	inline void resetToSavedBaseline(ModControllableAudio* saved) {
+		setModFXType(saved->modFXType_);
+		clippingAmount = saved->clippingAmount;
+		lpfMode = saved->lpfMode;
+		hpfMode = saved->hpfMode;
+		sidechain.resetToSavedBaseline(&saved->sidechain);
+	}
 	bool offerReceivedCCToLearnedParamsForClip(MIDICable& cable, uint8_t channel, uint8_t ccNumber, uint8_t value,
 	                                           ModelStackWithTimelineCounter* modelStack, int32_t noteRowIndex = -1);
 	bool offerReceivedCCToLearnedParamsForSong(MIDICable& cable, uint8_t channel, uint8_t ccNumber, uint8_t value,

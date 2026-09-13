@@ -156,6 +156,7 @@ public:
 	                                  bool shouldBackUpExpressionParamsToo);
 	Error readFromFile(Deserializer& reader, Song* song) override;
 	void writeDataToFile(Serializer& writer, Song* song) override;
+	void restoreSavedContentFrom(Clip* savedClip, ModelStackWithTimelineCounter* modelStack) override;
 	void prepNoteRowsForExitingKitMode(Song* song);
 	void deleteNoteRow(ModelStackWithTimelineCounter* modelStack, int32_t i);
 	int16_t getTopYNote();

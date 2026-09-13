@@ -448,18 +448,67 @@ ActionResult SoundEditor::buttonAction(deluge::hid::Button b, bool on, bool inCa
 
 	// Save button
 	else if (b == SAVE) {
-		if (on && (currentUIMode == UI_MODE_NONE) && !inSettingsMenu() && isUIInstrumentClipView) {
+		if (on) {
+			if (currentUIMode == UI_MODE_NONE && !inSettingsMenu() && isUIInstrumentClipView) {
+				if (Buttons::isShiftButtonPressed()) {
+					if (inCardRoutine) {
+						return ActionResult::REMIND_ME_OUTSIDE_CARD_ROUTINE;
+					}
+					if (getCurrentMenuItem() == &menu_item::multiRangeMenu) {
+						menu_item::multiRangeMenu.deletePress();
+					}
+				}
+				else {
+					// Don't open the save-preset UI immediately - defer to release (below) so a
+					// hold can be used for other things first (e.g. the modified-param grid
+					// highlight), same tap-vs-hold pattern View::buttonAction() already uses for
+					// SAVE in the main clip view. Without this, holding SAVE while looking at a
+					// parameter jumped straight into "save preset" and that highlight could never
+					// be reached at all.
+					currentUIMode = UI_MODE_HOLDING_SAVE_BUTTON;
+					view.timeSaveButtonPressed = AudioEngine::audioSampleTimer;
+					indicator_leds::setLedState(IndicatorLED::SAVE, true);
+				}
+			}
+		}
+		else if (currentUIMode == UI_MODE_HOLDING_SAVE_BUTTON) {
 			if (inCardRoutine) {
 				return ActionResult::REMIND_ME_OUTSIDE_CARD_ROUTINE;
 			}
-			if (Buttons::isShiftButtonPressed()) {
-				if (getCurrentMenuItem() == &menu_item::multiRangeMenu) {
-					menu_item::multiRangeMenu.deletePress();
-				}
-			}
-			else {
+			currentUIMode = UI_MODE_NONE;
+			indicator_leds::setLedState(IndicatorLED::SAVE, false);
+			if ((int32_t)(AudioEngine::audioSampleTimer - view.timeSaveButtonPressed) < kShortPressTime) {
 				openUI(&saveInstrumentPresetUI);
 			}
+		}
+	}
+
+	// Load button - only exists here to enable "reset clip to saved" (hold LOAD, press CLIP_VIEW,
+	// below) while actually looking at a parameter. LOAD has no sound-editor-specific action of
+	// its own the way SAVE does (there's no "load as new preset" equivalent here), so unlike SAVE
+	// there's nothing to defer - a short tap intentionally does nothing extra.
+	else if (b == LOAD) {
+		if (on) {
+			if (currentUIMode == UI_MODE_NONE && !inSettingsMenu() && isUIInstrumentClipView) {
+				currentUIMode = UI_MODE_HOLDING_LOAD_BUTTON;
+				indicator_leds::setLedState(IndicatorLED::LOAD, true);
+			}
+		}
+		else if (currentUIMode == UI_MODE_HOLDING_LOAD_BUTTON) {
+			currentUIMode = UI_MODE_NONE;
+			indicator_leds::setLedState(IndicatorLED::LOAD, false);
+		}
+	}
+
+	// Reset clip to saved: hold LOAD, press CLIP_VIEW
+	else if (b == CLIP_VIEW && currentUIMode == UI_MODE_HOLDING_LOAD_BUTTON) {
+		if (on) {
+			if (inCardRoutine) {
+				return ActionResult::REMIND_ME_OUTSIDE_CARD_ROUTINE;
+			}
+			currentSong->resetClipToSaved(getCurrentInstrumentClip());
+			// Redraw the current param screen so it reflects the values just reset.
+			renderUIsForOled();
 		}
 	}
 

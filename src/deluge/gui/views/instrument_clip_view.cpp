@@ -297,6 +297,11 @@ ActionResult InstrumentClipView::buttonAction(deluge::hid::Button b, bool on, bo
 
 	// Clip view button
 	else if (b == CLIP_VIEW) {
+		// reset clip to saved when pressing clip view while holding load
+		if (on && currentUIMode == UI_MODE_HOLDING_LOAD_BUTTON) {
+			currentSong->resetClipToSaved(getCurrentInstrumentClip());
+			return ActionResult::DEALT_WITH;
+		}
 		D_PRINTLN("InstrumentClipView::buttonAction(CLIP_VIEW) %d", (int)b);
 		if (on && currentUIMode == UI_MODE_NONE) {
 			if (inCardRoutine) {

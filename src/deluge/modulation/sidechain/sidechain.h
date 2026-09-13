@@ -47,6 +47,14 @@ public:
 	void registerHit(int32_t strength);
 	void registerHitRetrospectively(int32_t strength, uint32_t numSamplesAgo);
 
+	/// Reset attack/sync to match a freshly re-parsed copy of the same track's SideChain read back
+	/// from the song's saved XML file ("reset clip to saved" - see Song::resetClipToSaved()).
+	inline void resetToSavedBaseline(SideChain* saved) {
+		attack = saved->attack;
+		syncType = saved->syncType;
+		syncLevel = saved->syncLevel;
+	}
+
 private:
 	int32_t getActualAttackRate();
 	int32_t getActualReleaseRate();
