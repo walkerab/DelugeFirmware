@@ -2464,6 +2464,20 @@ void InstrumentClip::writeDataToFile(Serializer& writer, Song* song) {
 	}
 }
 
+namespace {
+// Refreshes a live NoteRow's content (params, automation, notes, per-row settings) from savedRow,
+// without touching the live row's identity fields (y, drum) or freeing the NoteRow object itself.
+void refreshNoteRowContentInPlace(NoteRow* liveRow, NoteRow* savedRow) {
+	liveRow->paramManager.destructAndForgetParamCollections();
+	liveRow->paramManager.cloneParamCollectionsFrom(&savedRow->paramManager, true, true);
+	liveRow->notes.empty();
+	liveRow->notes.cloneFrom(&savedRow->notes);
+	liveRow->probabilityValue = savedRow->probabilityValue;
+	liveRow->iteranceValue = savedRow->iteranceValue;
+	liveRow->fillValue = savedRow->fillValue;
+}
+} // namespace
+
 void InstrumentClip::restoreSavedContentFrom(Clip* savedClip, ModelStackWithTimelineCounter* modelStack) {
 	auto* savedInstrumentClip = (InstrumentClip*)savedClip;
 
@@ -2472,42 +2486,148 @@ void InstrumentClip::restoreSavedContentFrom(Clip* savedClip, ModelStackWithTime
 	backedUpParamManagerMIDI.destructAndForgetParamCollections();
 	backedUpParamManagerMIDI.cloneParamCollectionsFrom(&savedInstrumentClip->backedUpParamManagerMIDI, true, true);
 
-	// Notes + automation: free what's currently here, then deep-clone the freshly re-parsed rows in.
-	// noteRows.cloneFrom() copies the NoteRow structs themselves into fresh memory, but each row's
-	// own owned sub-containers (paramManager, notes) still alias the source clip's memory until
-	// beenCloned() is called per row - same two-step sequence InstrumentClip::clone() already uses.
-	noteRows.deleteNoteRowAtIndex(0, noteRows.getNumElements());
-	noteRows.cloneFrom(&savedInstrumentClip->noteRows);
-
 	bool isKit = (output->type == OutputType::KIT);
 	Kit* liveKit = isKit ? (Kit*)output : nullptr;
 
-	for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
-		NoteRow* noteRow = noteRows.getElement(i);
-		int32_t noteRowId = getNoteRowId(noteRow, i);
-		ModelStackWithNoteRow* modelStackWithNoteRow = modelStack->addNoteRow(noteRowId, noteRow);
-		noteRow->beenCloned(modelStackWithNoteRow, false);
+	// Notes + automation: match each live NoteRow against its counterpart in the freshly re-parsed
+	// clip by identity key (drum name for KIT clips, y for melodic clips), and refresh matched rows'
+	// content in place rather than freeing/recreating the NoteRow object itself. The sound editor can
+	// hold a pointer directly at a specific NoteRow's paramManager (see Song::resetClipToSaved()), and
+	// the previous wholesale delete-then-cloneFrom() here reintroduced exactly the crash pattern
+	// documented at InstrumentClip::clear() (E105/E177 - "note rows were lingering"). Only genuine
+	// structural deltas - a row existing live but not in the saved file, or vice versa - go through
+	// deletion/insertion.
+	if (isKit) {
+		// Pass 1: refresh matched rows in place; delete live rows with no counterpart in the saved
+		// file. A row with no drum assigned has no persistent identity to match by, so it's left
+		// untouched rather than guessed at.
+		int32_t i = 0;
+		while (i < noteRows.getNumElements()) {
+			NoteRow* liveRow = noteRows.getElement(i);
+			if (!liveRow->drum) {
+				i++;
+				continue;
+			}
 
-		// noteRow->drum still points into the scratch song's disposable Kit at this point (copied
-		// verbatim by the raw NoteRow struct clone above) - re-resolve it against the live Kit's
-		// drums by name before the scratch song goes away, same pattern
-		// InstrumentClip::changeInstrument() uses to reattach rows to a different kit's drums.
-		if (isKit) {
-			noteRow->drum = noteRow->drum ? liveKit->getDrumFromName(noteRow->drum->drumName) : nullptr;
+			NoteRow* savedRow = nullptr;
+			for (int32_t s = 0; s < savedInstrumentClip->noteRows.getNumElements(); s++) {
+				NoteRow* candidate = savedInstrumentClip->noteRows.getElement(s);
+				if (candidate->drum && candidate->drum->drumName == liveRow->drum->drumName) {
+					savedRow = candidate;
+					break;
+				}
+			}
+
+			if (savedRow) {
+				refreshNoteRowContentInPlace(liveRow, savedRow);
+				i++;
+			}
+			else {
+				deleteNoteRow(modelStack, i); // Shifts later rows down into slot i - don't advance i.
+			}
+		}
+
+		// Pass 2: bring back rows that exist in the saved file but have no live counterpart (deleted
+		// live since the last save). A matched row's drum identity never changes above, so
+		// re-checking here naturally finds only rows that were genuinely never matched.
+		for (int32_t s = 0; s < savedInstrumentClip->noteRows.getNumElements(); s++) {
+			NoteRow* savedRow = savedInstrumentClip->noteRows.getElement(s);
+			if (!savedRow->drum) {
+				continue;
+			}
+
+			bool stillMissing = true;
+			for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
+				NoteRow* liveRow = noteRows.getElement(i);
+				if (liveRow->drum && liveRow->drum->drumName == savedRow->drum->drumName) {
+					stillMissing = false;
+					break;
+				}
+			}
+			if (!stillMissing) {
+				continue;
+			}
+
+			NoteRow* newRow = noteRows.insertNoteRowAtIndex(noteRows.getNumElements());
+			if (!newRow) {
+				continue; // OOM - skip this row rather than leave a half-populated one.
+			}
+			newRow->y = savedRow->y;
+			newRow->drum = liveKit->getDrumFromName(savedRow->drum->drumName);
+			refreshNoteRowContentInPlace(newRow, savedRow);
+		}
+	}
+	else {
+		// Melodic clip: identity key is y (noteRows is y-ordered, so it's unique per row).
+		int32_t i = 0;
+		while (i < noteRows.getNumElements()) {
+			NoteRow* liveRow = noteRows.getElement(i);
+			NoteRow* savedRow = nullptr;
+			for (int32_t s = 0; s < savedInstrumentClip->noteRows.getNumElements(); s++) {
+				NoteRow* candidate = savedInstrumentClip->noteRows.getElement(s);
+				if (candidate->y == liveRow->y) {
+					savedRow = candidate;
+					break;
+				}
+			}
+
+			if (savedRow) {
+				refreshNoteRowContentInPlace(liveRow, savedRow);
+				i++;
+			}
+			else {
+				ModelStackWithNoteRow* modelStackWithNoteRow =
+				    modelStack->addNoteRow(getNoteRowId(liveRow, i), liveRow);
+				liveRow->stopCurrentlyPlayingNote(modelStackWithNoteRow);
+				noteRows.deleteNoteRowAtIndex(i); // Shifts later rows down into slot i - don't advance i.
+			}
+		}
+
+		for (int32_t s = 0; s < savedInstrumentClip->noteRows.getNumElements(); s++) {
+			NoteRow* savedRow = savedInstrumentClip->noteRows.getElement(s);
+			bool stillMissing = true;
+			for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
+				if (noteRows.getElement(i)->y == savedRow->y) {
+					stillMissing = false;
+					break;
+				}
+			}
+			if (!stillMissing) {
+				continue;
+			}
+
+			NoteRow* newRow = noteRows.insertNoteRowAtY(savedRow->y);
+			if (!newRow) {
+				continue;
+			}
+			refreshNoteRowContentInPlace(newRow, savedRow);
 		}
 	}
 
 	// Also restore the plain (non-AutoParam) settings on the Sound(s) behind this clip - e.g. mod FX
-	// type, filter mode - from the corresponding Sound(s) in the freshly re-parsed clip.
+	// type, filter mode - from the corresponding Sound(s) in the freshly re-parsed clip. Matched by
+	// drum name rather than index, since identity-preserving matching above may leave live rows in a
+	// different order/index than the saved file's rows.
 	if (output->type == OutputType::SYNTH) {
 		((SoundInstrument*)output)->resetToSavedBaseline((SoundInstrument*)savedInstrumentClip->output);
 	}
 	else if (isKit) {
 		for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
 			NoteRow* thisNoteRow = noteRows.getElement(i);
-			NoteRow* savedNoteRow = savedInstrumentClip->noteRows.getElement(i);
-			if (thisNoteRow->drum && thisNoteRow->drum->type == DrumType::SOUND && savedNoteRow->drum
-			    && savedNoteRow->drum->type == DrumType::SOUND) {
+			if (!thisNoteRow->drum || thisNoteRow->drum->type != DrumType::SOUND) {
+				continue;
+			}
+
+			NoteRow* savedNoteRow = nullptr;
+			for (int32_t s = 0; s < savedInstrumentClip->noteRows.getNumElements(); s++) {
+				NoteRow* candidate = savedInstrumentClip->noteRows.getElement(s);
+				if (candidate->drum && candidate->drum->drumName == thisNoteRow->drum->drumName) {
+					savedNoteRow = candidate;
+					break;
+				}
+			}
+
+			if (savedNoteRow && savedNoteRow->drum && savedNoteRow->drum->type == DrumType::SOUND) {
 				((SoundDrum*)thisNoteRow->drum)->resetToSavedBaseline((SoundDrum*)savedNoteRow->drum);
 			}
 		}

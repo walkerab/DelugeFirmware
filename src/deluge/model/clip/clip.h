@@ -209,6 +209,13 @@ public:
 	/// indexForSaving, which is scratch-only and only valid mid-save.
 	uint32_t lastSavedIndex{kNeverSaved};
 
+	/// Whether this clip was in arrangementOnlyClips (true) or sessionClips (false) as of the same
+	/// save/load that stamped lastSavedIndex above. A clip can move between the two arrays live
+	/// (e.g. Song::removeSessionClipLowLevel()) without that ever being saved, so this must be
+	/// captured at stamp time rather than read live via isArrangementOnlyClip() - see
+	/// Song::resetClipToSaved().
+	bool lastSavedWasArrangementOnly{false};
+
 	LaunchStyle launchStyle;
 	int64_t fillEventAtTickCount;
 	bool overdubsShouldCloneOutput;

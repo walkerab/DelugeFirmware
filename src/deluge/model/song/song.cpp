@@ -22,6 +22,7 @@
 #include "gui/ui/browser/browser.h"
 #include "gui/ui/load/load_instrument_preset_ui.h"
 #include "gui/ui/load/load_song_ui.h"
+#include "gui/ui/sound_editor.h"
 #include "gui/views/arranger_view.h"
 #include "gui/views/audio_clip_view.h"
 #include "gui/views/instrument_clip_view.h"
@@ -1481,12 +1482,14 @@ void Song::resetClipToSaved(Clip* clip) {
 
 	// Locate the matching track by identity - the same matching the normal loader already uses to
 	// reattach a freshly-parsed clip to an existing live track, just run here against the scratch
-	// song's freshly-parsed tracks instead.
+	// song's freshly-parsed tracks instead. Matched by lastSavedName rather than the live name: the
+	// user may have renamed the track since the last save without saving again, in which case the
+	// live name no longer appears anywhere in the file, but lastSavedName still does.
 	Output* liveOutput = clip->output;
 	Output* matchedOutput = nullptr;
 
 	if (liveOutput->type == OutputType::AUDIO) {
-		matchedOutput = scratchSong->getAudioOutputFromName(liveOutput->name.get());
+		matchedOutput = scratchSong->getAudioOutputFromName(liveOutput->lastSavedName.get());
 	}
 	else {
 		int32_t channel = 0;
@@ -1504,14 +1507,19 @@ void Song::resetClipToSaved(Clip* clip) {
 			channel = ((CVInstrument*)liveOutput)->getChannel();
 		}
 		matchedOutput = scratchSong->getInstrumentFromPresetSlot(liveOutput->type, channel, channelSuffix,
-		                                                         liveOutput->name.get(), dirPathForMatch, false);
+		                                                         liveOutput->lastSavedName.get(), dirPathForMatch,
+		                                                         false);
 	}
 
-	// Locate the clip on that track whose lastSavedIndex matches.
+	// Locate the clip on that track whose lastSavedIndex matches. Which array to search is
+	// determined by lastSavedWasArrangementOnly (captured at stamp time), not by the clip's current
+	// live isArrangementOnlyClip() - the clip may have moved between session and arrangement-only
+	// (e.g. via Song::removeSessionClipLowLevel()) since the last save, without lastSavedIndex ever
+	// being re-stamped to reflect that move.
 	Clip* foundClip = nullptr;
 	if (matchedOutput) {
 		ClipArray& scratchArray =
-		    clip->isArrangementOnlyClip() ? scratchSong->arrangementOnlyClips : scratchSong->sessionClips;
+		    clip->lastSavedWasArrangementOnly ? scratchSong->arrangementOnlyClips : scratchSong->sessionClips;
 		for (int32_t c = 0; c < scratchArray.getNumElements(); c++) {
 			Clip* candidate = scratchArray.getClipAtIndex(c);
 			if (candidate->output == matchedOutput && candidate->lastSavedIndex == clip->lastSavedIndex) {
@@ -1537,6 +1545,18 @@ void Song::resetClipToSaved(Clip* clip) {
 	// integrate with it.
 	actionLogger.deleteAllLogs();
 
+	// If the sound editor is currently showing a screen scoped to one specific NoteRow of this KIT
+	// clip (as opposed to the clip-level paramManager, e.g. the "affect entire" / global FX screen),
+	// its cached currentParamManager/currentModControllable point directly at that NoteRow. The
+	// splice below can delete or replace NoteRow objects wholesale, so back out of that screen first
+	// - exactly the same "leave the sound editor safely" step LoadSongUI relies on nullifyUIs() for
+	// before a full song reload, made explicit here since this operation can't nullify the whole UI
+	// stack without also defeating its own "stay in place" purpose.
+	if (liveOutput->type == OutputType::KIT && getCurrentUI() == &soundEditor && soundEditor.currentParamManager
+	    && soundEditor.currentParamManager != &clip->paramManager) {
+		soundEditor.exitCompletely();
+	}
+
 	// Splice the freshly re-parsed clip's saved content into the live clip in place. Locked against
 	// audio rendering for the duration - same guard InstrumentClip::changeInstrument() uses for this
 	// same class of live-clip-restructuring risk (rendering is cooperative, not ISR-driven, so this
@@ -1550,6 +1570,13 @@ void Song::resetClipToSaved(Clip* clip) {
 	clip->restoreSavedContentFrom(foundClip, modelStackWithTimelineCounter);
 
 	AudioEngine::audioRoutineLocked = false;
+
+	// View::activeModControllableModelStack caches the same kind of per-NoteRow pointer as
+	// soundEditor did above - set on essentially any clip-selection/mod-knob interaction via
+	// InstrumentClip::getActiveModControllable() whenever a KIT drum is selected (not just while the
+	// sound editor menu happens to be open) - so it can just as easily be left dangling by the splice.
+	// Unlike the sound editor there's no screen to back out of; a fresh resolve is enough.
+	view.setActiveModControllableTimelineCounter(clip);
 
 	scratchSong->~Song();
 	delugeDealloc(scratchSongMemory);
@@ -2311,6 +2338,8 @@ loadOutput:
 			}
 
 			thisClip->lastSavedIndex = thisClip->output->clipCountForSavingOrLoadingTemp++;
+			thisClip->lastSavedWasArrangementOnly = (clipArray == &arrangementOnlyClips);
+			thisClip->output->lastSavedName.set(&thisClip->output->name);
 
 			// Correct different non-synced rates of old song files
 			// In a perfect world, we'd do this for Kits, MIDI and CV too
@@ -5239,9 +5268,11 @@ void Song::setupClipIndexesForSaving() {
 	}
 	for (Clip* clip : AllClips::inSession(this)) {
 		clip->indexForSaving = sessionIndex++;
-		// lastSavedIndex: this clip's position among its own track's clips, as of this save - see
-		// Song::resetClipToSaved().
+		// lastSavedIndex/lastSavedWasArrangementOnly: this clip's position among its own track's
+		// clips, as of this save - see Song::resetClipToSaved().
 		clip->lastSavedIndex = clip->output->clipCountForSavingOrLoadingTemp++;
+		clip->lastSavedWasArrangementOnly = false;
+		clip->output->lastSavedName.set(&clip->output->name);
 	}
 	for (Output* output = firstOutput; output; output = output->next) {
 		output->clipCountForSavingOrLoadingTemp = 0;
@@ -5250,6 +5281,7 @@ void Song::setupClipIndexesForSaving() {
 	for (Clip* clip : AllClips::inArrangementOnly(this)) {
 		clip->indexForSaving = arrangerOnlyIndex++;
 		clip->lastSavedIndex = clip->output->clipCountForSavingOrLoadingTemp++;
+		clip->lastSavedWasArrangementOnly = true;
 	}
 }
 
