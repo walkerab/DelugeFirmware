@@ -23,6 +23,7 @@
 #include "gui/context_menu/audio_input_selector.h"
 #include "gui/context_menu/stem_export/cancel_stem_export.h"
 #include "gui/menu_item/colour.h"
+#include "gui/views/arranger_clip_instance_length.h"
 #include "gui/ui/keyboard/keyboard_screen.h"
 #include "gui/ui/load/load_instrument_preset_ui.h"
 #include "gui/ui/rename/rename_output_ui.h"
@@ -1599,20 +1600,10 @@ void ArrangerView::adjustClipInstanceLength(Output* output, int32_t x, int32_t y
 
 		int32_t oldLength = clipInstance->length;
 
-		int32_t newLength = squareEnd - clipInstance->pos;
-
-		// Make sure it doesn't collide with next ClipInstance
 		ClipInstance* nextClipInstance = output->clipInstances.getElement(pressedClipInstanceIndex + 1);
-		if (nextClipInstance) {
-			int32_t maxLength = nextClipInstance->pos - clipInstance->pos;
-			if (newLength > maxLength) {
-				newLength = maxLength;
-			}
-		}
-
-		if (newLength > kMaxSequenceLength - clipInstance->pos) {
-			newLength = kMaxSequenceLength - clipInstance->pos;
-		}
+		int32_t newLength = clampClipInstanceLength(
+		    squareEnd - clipInstance->pos, clipInstance->pos, nextClipInstance != nullptr,
+		    nextClipInstance ? nextClipInstance->pos : 0, kMaxSequenceLength);
 
 		// If we are in fact able to lengthen it...
 		if (newLength > oldLength) {
@@ -2523,31 +2514,10 @@ void ArrangerView::selectEncoderAction(int8_t offset) {
 			                      clipInstance->clip, nullptr);
 		}
 
-		int32_t newLength;
-
-		// No newClip means this will become a white clip
-		if (!newClip) {
-			// which will have the same length as the original clip instance
-			newLength = desiredLength;
-		}
-
-		else {
-			// choosing a section clip will reset the clip instance length to the length of that section clip
-			newLength = newClip->loopLength;
-		}
-
-		// Make sure it's not too long
 		ClipInstance* nextClipInstance = output->clipInstances.getElement(pressedClipInstanceIndex + 1);
-		if (nextClipInstance) {
-			int32_t maxLength = nextClipInstance->pos - clipInstance->pos;
-
-			if (newLength > maxLength) {
-				newLength = maxLength;
-			}
-		}
-		if (newLength > kMaxSequenceLength - clipInstance->pos) {
-			newLength = kMaxSequenceLength - clipInstance->pos;
-		}
+		int32_t newLength = clampClipInstanceLength(
+		    desiredLength, clipInstance->pos, nextClipInstance != nullptr,
+		    nextClipInstance ? nextClipInstance->pos : 0, kMaxSequenceLength);
 		// log action
 		Action* action = actionLogger.getNewAction(ActionType::CLIP_INSTANCE_EDIT, ActionAddition::ALLOWED);
 		clipInstance->change(action, output, clipInstance->pos, newLength, newClip);
