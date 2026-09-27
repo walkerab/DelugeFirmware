@@ -64,6 +64,8 @@ file(GLOB_RECURSE deluge_SOURCES
         # For name comparison / default naming tests
         ../../src/deluge/util/name_compare.cpp
         ../../src/deluge/gui/ui/browser/default_name.cpp
+        # For menu param change tests
+        ../../src/deluge/gui/ui/menu_param_change.cpp
 )
 
 add_executable(UnitTests
@@ -82,6 +84,7 @@ add_executable(UnitTests
         default_name_tests.cpp
         rgb_tests.cpp
         notes_state_tests.cpp
+        menu_param_change_tests.cpp
 )
 add_test(NAME UnitTests
         COMMAND UnitTests)
