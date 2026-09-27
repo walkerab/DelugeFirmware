@@ -309,19 +309,8 @@ void SoundEditor::setShortcutsVersion(int32_t newVersion) {
 
 SoundEditor soundEditor{};
 
-SoundEditor::SoundEditor() {
-	currentParamShortcutX = kNoSelection;
-	timeLastAttemptedAutomatedParamEdit = 0;
-	shouldGoUpOneLevelOnBegin = false;
-	setupKitGlobalFXMenu = false;
-	selectedNoteRow = false;
-	resetSourceBlinks();
-}
-
-void SoundEditor::resetSourceBlinks() {
-	memset(sourceShortcutBlinkFrequencies, 255, sizeof(sourceShortcutBlinkFrequencies));
-	memset(sourceShortcutBlinkColours, 0, sizeof(sourceShortcutBlinkColours));
-}
+// SoundEditor::SoundEditor() and resetSourceBlinks() are defined in sound_editor_current_menu_item.cpp,
+// alongside getCurrentMenuItem() - same reason, kept out of this file's dependency chain for host tests.
 
 bool SoundEditor::editingKit() {
 	return getCurrentOutputType() == OutputType::KIT;
@@ -2121,23 +2110,8 @@ doMIDIOrCV:
 	return true;
 }
 
-namespace {
-// A plain, un-overridden MenuItem whose virtual methods all fall back to their harmless base-class
-// defaults (isSubmenu() -> false, getParamKind() -> Kind::NONE, buttonAction() -> NOT_DEALT_WITH, etc.).
-// Returned by getCurrentMenuItem() instead of null once the sound editor has closed
-// (menuItemNavigationRecord[navigationDepth] is nulled in exitCompletely()), so callers can keep
-// treating the result as a normal MenuItem* without every call site needing its own null check.
-// Not const: getCurrentMenuItem() returns a plain MenuItem* everywhere, and real call sites invoke
-// non-const methods on the result (beginSession(), endSession(), selectEncoderAction(), etc.), so this
-// can't be const-qualified without changing that return type across the whole class. Nothing is ever
-// meant to actually mutate it - it's conceptually fixed, just not literally, hence no k prefix.
-MenuItem closedMenuItem;
-} // namespace
-
-MenuItem* SoundEditor::getCurrentMenuItem() {
-	MenuItem* item = menuItemNavigationRecord[navigationDepth];
-	return item ? item : &closedMenuItem;
-}
+// SoundEditor::getCurrentMenuItem() is defined in sound_editor_current_menu_item.cpp - kept separate so
+// it can be linked into a host unit test on its own, without the rest of this file's dependency chain.
 
 bool SoundEditor::inSettingsMenu() {
 	return (menuItemNavigationRecord[0] == &settingsRootMenu);

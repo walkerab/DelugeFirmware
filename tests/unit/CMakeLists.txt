@@ -64,6 +64,8 @@ file(GLOB_RECURSE deluge_SOURCES
         # For name comparison / default naming tests
         ../../src/deluge/util/name_compare.cpp
         ../../src/deluge/gui/ui/browser/default_name.cpp
+        # For sound editor getCurrentMenuItem tests
+        ../../src/deluge/gui/ui/sound_editor_current_menu_item.cpp
 )
 
 add_executable(UnitTests
@@ -83,6 +85,7 @@ add_executable(UnitTests
         rgb_tests.cpp
         notes_state_tests.cpp
         menu_item_sentinel_tests.cpp
+        sound_editor_get_current_menu_item_tests.cpp
 )
 add_test(NAME UnitTests
         COMMAND UnitTests)
