@@ -1565,8 +1565,10 @@ ActionResult SoundEditor::potentialShortcutPadAction(int32_t x, int32_t y, bool 
 					}
 
 					// Replace the current shortcut with a second layer shortcut if the pad was pressed twice
+					// (getCurrentMenuItem() never returns null - see the closed-menu-item sentinel in
+					// getCurrentMenuItem() itself - so no null check is needed here)
 					secondLayerShortcutsToggled =
-						getCurrentMenuItem() != nullptr && x == currentParamShortcutX && y == currentParamShortcutY
+						x == currentParamShortcutX && y == currentParamShortcutY
 						&& getCurrentMenuItem()->getParamKind() != modulation::params::Kind::PATCH_CABLE
 							? !secondLayerShortcutsToggled
 							: false;
@@ -2125,8 +2127,18 @@ doMIDIOrCV:
 	return true;
 }
 
+namespace {
+// A plain, un-overridden MenuItem whose virtual methods all fall back to their harmless base-class
+// defaults (isSubmenu() -> false, getParamKind() -> Kind::NONE, buttonAction() -> NOT_DEALT_WITH, etc.).
+// Returned by getCurrentMenuItem() instead of null once the sound editor has closed
+// (menuItemNavigationRecord[navigationDepth] is nulled in exitCompletely()), so callers can keep
+// treating the result as a normal MenuItem* without every call site needing its own null check.
+MenuItem kClosedMenuItem;
+} // namespace
+
 MenuItem* SoundEditor::getCurrentMenuItem() {
-	return menuItemNavigationRecord[navigationDepth];
+	MenuItem* item = menuItemNavigationRecord[navigationDepth];
+	return item ? item : &kClosedMenuItem;
 }
 
 bool SoundEditor::inSettingsMenu() {
