@@ -13,6 +13,7 @@
 #include "gui/ui/audio_recorder.h"
 #include "gui/ui/browser/sample_browser.h"
 #include "gui/ui/keyboard/keyboard_screen.h"
+#include "gui/ui/menu_param_change.h"
 #include "gui/ui/menus.h"
 #include "gui/ui/rename/rename_drum_ui.h"
 #include "gui/ui/sample_marker_editor.h"
@@ -883,10 +884,17 @@ void SoundEditor::handlePotentialParamMenuChange(deluge::hid::Button b, bool inC
                                                  MenuItem* currentItem, bool isHorizontalMenu) {
 	using namespace deluge::hid::button;
 	if (previousItem != currentItem) {
-		bool previousMenuIsParam = (isHorizontalMenu == false || previousItem->isSubmenu() == false)
-		                           && (previousItem->getParamKind() != deluge::modulation::params::Kind::NONE);
-		bool currentMenuIsParam = (isHorizontalMenu == false || currentItem->isSubmenu() == false)
-		                          && (currentItem->getParamKind() != deluge::modulation::params::Kind::NONE);
+		// previousItem/currentItem are null when backing all the way out of the menu (goUpOneLevel() ->
+		// exitCompletely()) - isParamMenu() treats "no menu item" as "not a param menu" rather than
+		// dereferencing null.
+		bool previousMenuIsParam = isParamMenu(previousItem != nullptr, isHorizontalMenu,
+		                                       previousItem != nullptr && previousItem->isSubmenu(),
+		                                       previousItem != nullptr ? previousItem->getParamKind()
+		                                                               : deluge::modulation::params::Kind::NONE);
+		bool currentMenuIsParam = isParamMenu(currentItem != nullptr, isHorizontalMenu,
+		                                      currentItem != nullptr && currentItem->isSubmenu(),
+		                                      currentItem != nullptr ? currentItem->getParamKind()
+		                                                             : deluge::modulation::params::Kind::NONE);
 
 		// if we're entering a non-param menu from a param menu
 		// potentially swap out automation view as background root UI

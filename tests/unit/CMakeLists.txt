@@ -70,6 +70,8 @@ file(GLOB_RECURSE deluge_SOURCES
         # For arranger audition pad colour tests
         ../../src/deluge/gui/views/arranger_audition_pad_colour.cpp
         ../../src/deluge/gui/colour/rgb.cpp
+        # For menu param change tests
+        ../../src/deluge/gui/ui/menu_param_change.cpp
 )
 
 add_executable(UnitTests
@@ -90,6 +92,7 @@ add_executable(UnitTests
         notes_state_tests.cpp
         iterance_migration_tests.cpp
         arranger_audition_pad_colour_tests.cpp
+        menu_param_change_tests.cpp
 )
 add_test(NAME UnitTests
         COMMAND UnitTests)
