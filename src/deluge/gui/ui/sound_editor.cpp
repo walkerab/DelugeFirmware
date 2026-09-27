@@ -231,41 +231,38 @@ bool SoundEditor::renderMainPads(uint32_t whichRows, RGB image[][kDisplayWidth +
 
 
 	MenuItem* item = getCurrentMenuItem();
-	if (item)
+	auto param = item->getParamIndex();
+	auto kind = item->getParamKind();
+	auto patchable = kind == params::Kind::PATCHED;
+	if (kind == params::Kind::PATCH_CABLE)
 	{
-		auto param = item->getParamIndex();
-		auto kind = item->getParamKind();
-		auto patchable = kind == params::Kind::PATCHED;
-		if (kind == params::Kind::PATCH_CABLE)
+		param = soundEditor.patchingParamSelected;
+		kind = params::Kind::PATCHED;
+		patchable = true;
+	}
+	if (patchable)
+	{
+		D_PRINTLN("it's patchable");
+		// canary - if the local lfo (lfo 2 to users) can't patch then it's a global patched param
+		if (currentSound and currentSound->maySourcePatchToParam(PatchSource::LFO_LOCAL_1, param,
+		                                                         soundEditor.currentParamManager)
+			== PatchCableAcceptance::DISALLOWED)
 		{
-			param = soundEditor.patchingParamSelected;
-			kind = params::Kind::PATCHED;
-			patchable = true;
-		}
-		if (patchable)
-		{
-			D_PRINTLN("it's patchable");
-			// canary - if the local lfo (lfo 2 to users) can't patch then it's a global patched param
-			if (currentSound and currentSound->maySourcePatchToParam(PatchSource::LFO_LOCAL_1, param,
-			                                                         soundEditor.currentParamManager)
-				== PatchCableAcceptance::DISALLOWED)
+			for (int32_t yDisplay = 0; yDisplay < kDisplayHeight; yDisplay++)
 			{
-				for (int32_t yDisplay = 0; yDisplay < kDisplayHeight; yDisplay++)
+				for (int32_t xDisplay = kDisplayWidth - 2; xDisplay < kDisplayWidth; xDisplay++)
 				{
-					for (int32_t xDisplay = kDisplayWidth - 2; xDisplay < kDisplayWidth; xDisplay++)
-					{
-						image[yDisplay][xDisplay] = mono_mod_shortcut_colours[xDisplay - (kDisplayWidth - 2)][yDisplay];
-					}
+					image[yDisplay][xDisplay] = mono_mod_shortcut_colours[xDisplay - (kDisplayWidth - 2)][yDisplay];
 				}
 			}
-			else
+		}
+		else
+		{
+			for (int32_t yDisplay = 0; yDisplay < kDisplayHeight; yDisplay++)
 			{
-				for (int32_t yDisplay = 0; yDisplay < kDisplayHeight; yDisplay++)
+				for (int32_t xDisplay = kDisplayWidth - 2; xDisplay < kDisplayWidth; xDisplay++)
 				{
-					for (int32_t xDisplay = kDisplayWidth - 2; xDisplay < kDisplayWidth; xDisplay++)
-					{
-						image[yDisplay][xDisplay] = poly_mod_shortcut_colours[xDisplay - (kDisplayWidth - 2)][yDisplay];
-					}
+					image[yDisplay][xDisplay] = poly_mod_shortcut_colours[xDisplay - (kDisplayWidth - 2)][yDisplay];
 				}
 			}
 		}
@@ -1142,10 +1139,7 @@ bool SoundEditor::beginScreen(MenuItem* oldMenuItem) {
 
 /// end current menu item session before beginning new menu item session or exiting the sound editor
 void SoundEditor::endScreen() {
-	MenuItem* currentMenuItem = getCurrentMenuItem();
-	if (currentMenuItem != nullptr) {
-		currentMenuItem->endSession();
-	}
+	getCurrentMenuItem()->endSession();
 }
 
 void SoundEditor::possibleChangeToCurrentRangeDisplay() {
