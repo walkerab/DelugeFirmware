@@ -67,6 +67,9 @@ file(GLOB_RECURSE deluge_SOURCES
         # For iterance migration tests (links against the real iterancePresets[]
         # from lookuptables.cpp, already included above)
         ../../src/deluge/model/iterance/iterance_migration.cpp
+        # For arranger audition pad colour tests
+        ../../src/deluge/gui/views/arranger_audition_pad_colour.cpp
+        ../../src/deluge/gui/colour/rgb.cpp
 )
 
 add_executable(UnitTests
@@ -86,6 +89,7 @@ add_executable(UnitTests
         rgb_tests.cpp
         notes_state_tests.cpp
         iterance_migration_tests.cpp
+        arranger_audition_pad_colour_tests.cpp
 )
 add_test(NAME UnitTests
         COMMAND UnitTests)

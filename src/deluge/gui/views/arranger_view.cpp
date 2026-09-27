@@ -29,6 +29,7 @@
 #include "gui/ui/sound_editor.h"
 #include "gui/ui/ui.h"
 #include "gui/ui_timer_manager.h"
+#include "gui/views/arranger_audition_pad_colour.h"
 #include "gui/views/audio_clip_view.h"
 #include "gui/views/automation_view.h"
 #include "gui/views/instrument_clip_view.h"
@@ -688,7 +689,9 @@ drawNormally:
 			thisColour = colours::red;
 		}
 		else {
-			thisColour = colours::black;
+			Output* output = outputsOnScreen[yDisplay];
+			int16_t trackColourHue = output ? output->colour : 0;
+			thisColour = computeArrangerAuditionPadIdleColour(output != nullptr, trackColourHue);
 		}
 	}
 }
