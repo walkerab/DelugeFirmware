@@ -1128,7 +1128,12 @@ bool SoundEditor::beginScreen(MenuItem* oldMenuItem) {
 
 /// end current menu item session before beginning new menu item session or exiting the sound editor
 void SoundEditor::endScreen() {
-	getCurrentMenuItem()->endSession();
+	// Checking the raw slot, not getCurrentMenuItem()'s return value: MenuItem::endSession()'s base
+	// default isn't a no-op (it resets currentParamShortcutX/Y), so this must still skip the call when
+	// there's no real session to end, even though getCurrentMenuItem() itself never returns null.
+	if (menuItemNavigationRecord[navigationDepth] != nullptr) {
+		getCurrentMenuItem()->endSession();
+	}
 }
 
 void SoundEditor::possibleChangeToCurrentRangeDisplay() {
@@ -1547,11 +1552,15 @@ ActionResult SoundEditor::potentialShortcutPadAction(int32_t x, int32_t y, bool 
 						item = &drumNameEditMenu;
 					}
 
-					// Replace the current shortcut with a second layer shortcut if the pad was pressed twice
-					// (getCurrentMenuItem() never returns null - see the closed-menu-item sentinel in
-					// getCurrentMenuItem() itself - so no null check is needed here)
+					// Replace the current shortcut with a second layer shortcut if the pad was pressed twice.
+					// Checking the raw slot, not getCurrentMenuItem()'s return value: this function runs
+					// even while the sound editor is closed (other views call soundEditor.
+					// potentialShortcutPadAction() directly), and closed must still force this false, which
+					// getCurrentMenuItem() != nullptr used to do before it became the closed-menu sentinel
+					// (whose getParamKind() default of Kind::NONE would otherwise satisfy this condition).
 					secondLayerShortcutsToggled =
-						x == currentParamShortcutX && y == currentParamShortcutY
+						menuItemNavigationRecord[navigationDepth] != nullptr && x == currentParamShortcutX
+						&& y == currentParamShortcutY
 						&& getCurrentMenuItem()->getParamKind() != modulation::params::Kind::PATCH_CABLE
 							? !secondLayerShortcutsToggled
 							: false;
