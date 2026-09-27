@@ -2127,12 +2127,16 @@ namespace {
 // Returned by getCurrentMenuItem() instead of null once the sound editor has closed
 // (menuItemNavigationRecord[navigationDepth] is nulled in exitCompletely()), so callers can keep
 // treating the result as a normal MenuItem* without every call site needing its own null check.
-MenuItem kClosedMenuItem;
+// Not const: getCurrentMenuItem() returns a plain MenuItem* everywhere, and real call sites invoke
+// non-const methods on the result (beginSession(), endSession(), selectEncoderAction(), etc.), so this
+// can't be const-qualified without changing that return type across the whole class. Nothing is ever
+// meant to actually mutate it - it's conceptually fixed, just not literally, hence no k prefix.
+MenuItem closedMenuItem;
 } // namespace
 
 MenuItem* SoundEditor::getCurrentMenuItem() {
 	MenuItem* item = menuItemNavigationRecord[navigationDepth];
-	return item ? item : &kClosedMenuItem;
+	return item ? item : &closedMenuItem;
 }
 
 bool SoundEditor::inSettingsMenu() {
