@@ -2445,7 +2445,12 @@ void Song::deleteSoundsWhichWontSound() {
 		}
 	}
 
-	// Now there's only one Clip left per Output
+	// Usually only one Clip is left per Output at this point, but not always: the loop above keeps a
+	// clip if it's isActiveOnOutput() OR it's view.activeModControllableModelStack's clip, which can
+	// be two different clips on the same Output (e.g. playing one clip while a different clip on the
+	// same track is open in the sound editor). So InstrumentRemoval::DELETE_OR_HIBERNATE_IF_UNUSED is
+	// required here, not InstrumentRemoval::DELETE - the latter destroys the Output unconditionally,
+	// which would leave a second surviving clip on that Output pointing at freed memory.
 
 	// Delete Clips which won't sound
 	// For each Clip in session and arranger
@@ -2454,7 +2459,7 @@ void Song::deleteSoundsWhichWontSound() {
 
 		AudioEngine::routineWithClusterLoading();
 		if (clip->deleteSoundsWhichWontSound(this)) {
-			it.deleteClip(InstrumentRemoval::DELETE);
+			it.deleteClip(InstrumentRemoval::DELETE_OR_HIBERNATE_IF_UNUSED);
 		}
 		else {
 			++it;
