@@ -32,15 +32,18 @@ public:
 	LearnedMIDI();
 	void clear();
 
-	constexpr bool equalsCable(MIDICable* newCable) const {
+	// Not constexpr: differentiatingInputsByDevice is a mutable extern, so these can never actually
+	// produce a constant expression - clang correctly treats that as ill-formed ([-Winvalid-constexpr]),
+	// while the arm-none-eabi-g++ toolchain used for the real firmware build happens not to enforce it.
+	bool equalsCable(MIDICable* newCable) const {
 		return (!MIDIDeviceManager::differentiatingInputsByDevice || !cable || newCable == cable);
 	}
 
-	constexpr bool equalsChannelOrZone(MIDICable* newCable, int32_t newChannelOrZone) const {
+	bool equalsChannelOrZone(MIDICable* newCable, int32_t newChannelOrZone) const {
 		return (newChannelOrZone == channelOrZone && equalsCable(newCable));
 	}
 
-	constexpr bool equalsNoteOrCC(MIDICable* newCable, int32_t newChannel, int32_t newNoteOrCC) const {
+	bool equalsNoteOrCC(MIDICable* newCable, int32_t newChannel, int32_t newNoteOrCC) const {
 		return (newNoteOrCC == noteOrCC && equalsChannelOrZone(newCable, newChannel));
 	}
 

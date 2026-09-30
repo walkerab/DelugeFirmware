@@ -231,41 +231,38 @@ bool SoundEditor::renderMainPads(uint32_t whichRows, RGB image[][kDisplayWidth +
 
 
 	MenuItem* item = getCurrentMenuItem();
-	if (item)
+	auto param = item->getParamIndex();
+	auto kind = item->getParamKind();
+	auto patchable = kind == params::Kind::PATCHED;
+	if (kind == params::Kind::PATCH_CABLE)
 	{
-		auto param = item->getParamIndex();
-		auto kind = item->getParamKind();
-		auto patchable = kind == params::Kind::PATCHED;
-		if (kind == params::Kind::PATCH_CABLE)
+		param = soundEditor.patchingParamSelected;
+		kind = params::Kind::PATCHED;
+		patchable = true;
+	}
+	if (patchable)
+	{
+		D_PRINTLN("it's patchable");
+		// canary - if the local lfo (lfo 2 to users) can't patch then it's a global patched param
+		if (currentSound and currentSound->maySourcePatchToParam(PatchSource::LFO_LOCAL_1, param,
+		                                                         soundEditor.currentParamManager)
+			== PatchCableAcceptance::DISALLOWED)
 		{
-			param = soundEditor.patchingParamSelected;
-			kind = params::Kind::PATCHED;
-			patchable = true;
-		}
-		if (patchable)
-		{
-			D_PRINTLN("it's patchable");
-			// canary - if the local lfo (lfo 2 to users) can't patch then it's a global patched param
-			if (currentSound and currentSound->maySourcePatchToParam(PatchSource::LFO_LOCAL_1, param,
-			                                                         soundEditor.currentParamManager)
-				== PatchCableAcceptance::DISALLOWED)
+			for (int32_t yDisplay = 0; yDisplay < kDisplayHeight; yDisplay++)
 			{
-				for (int32_t yDisplay = 0; yDisplay < kDisplayHeight; yDisplay++)
+				for (int32_t xDisplay = kDisplayWidth - 2; xDisplay < kDisplayWidth; xDisplay++)
 				{
-					for (int32_t xDisplay = kDisplayWidth - 2; xDisplay < kDisplayWidth; xDisplay++)
-					{
-						image[yDisplay][xDisplay] = mono_mod_shortcut_colours[xDisplay - (kDisplayWidth - 2)][yDisplay];
-					}
+					image[yDisplay][xDisplay] = mono_mod_shortcut_colours[xDisplay - (kDisplayWidth - 2)][yDisplay];
 				}
 			}
-			else
+		}
+		else
+		{
+			for (int32_t yDisplay = 0; yDisplay < kDisplayHeight; yDisplay++)
 			{
-				for (int32_t yDisplay = 0; yDisplay < kDisplayHeight; yDisplay++)
+				for (int32_t xDisplay = kDisplayWidth - 2; xDisplay < kDisplayWidth; xDisplay++)
 				{
-					for (int32_t xDisplay = kDisplayWidth - 2; xDisplay < kDisplayWidth; xDisplay++)
-					{
-						image[yDisplay][xDisplay] = poly_mod_shortcut_colours[xDisplay - (kDisplayWidth - 2)][yDisplay];
-					}
+					image[yDisplay][xDisplay] = poly_mod_shortcut_colours[xDisplay - (kDisplayWidth - 2)][yDisplay];
 				}
 			}
 		}
@@ -312,19 +309,8 @@ void SoundEditor::setShortcutsVersion(int32_t newVersion) {
 
 SoundEditor soundEditor{};
 
-SoundEditor::SoundEditor() {
-	currentParamShortcutX = kNoSelection;
-	timeLastAttemptedAutomatedParamEdit = 0;
-	shouldGoUpOneLevelOnBegin = false;
-	setupKitGlobalFXMenu = false;
-	selectedNoteRow = false;
-	resetSourceBlinks();
-}
-
-void SoundEditor::resetSourceBlinks() {
-	memset(sourceShortcutBlinkFrequencies, 255, sizeof(sourceShortcutBlinkFrequencies));
-	memset(sourceShortcutBlinkColours, 0, sizeof(sourceShortcutBlinkColours));
-}
+// SoundEditor::SoundEditor() and resetSourceBlinks() are defined in sound_editor_current_menu_item.cpp,
+// alongside getCurrentMenuItem() - same reason, kept out of this file's dependency chain for host tests.
 
 bool SoundEditor::editingKit() {
 	return getCurrentOutputType() == OutputType::KIT;
@@ -1146,9 +1132,11 @@ bool SoundEditor::beginScreen(MenuItem* oldMenuItem) {
 
 /// end current menu item session before beginning new menu item session or exiting the sound editor
 void SoundEditor::endScreen() {
-	MenuItem* currentMenuItem = getCurrentMenuItem();
-	if (currentMenuItem != nullptr) {
-		currentMenuItem->endSession();
+	// Checking the raw slot, not getCurrentMenuItem()'s return value: MenuItem::endSession()'s base
+	// default isn't a no-op (it resets currentParamShortcutX/Y), so this must still skip the call when
+	// there's no real session to end, even though getCurrentMenuItem() itself never returns null.
+	if (menuItemNavigationRecord[navigationDepth] != nullptr) {
+		getCurrentMenuItem()->endSession();
 	}
 }
 
@@ -1568,9 +1556,15 @@ ActionResult SoundEditor::potentialShortcutPadAction(int32_t x, int32_t y, bool 
 						item = &drumNameEditMenu;
 					}
 
-					// Replace the current shortcut with a second layer shortcut if the pad was pressed twice
+					// Replace the current shortcut with a second layer shortcut if the pad was pressed twice.
+					// Checking the raw slot, not getCurrentMenuItem()'s return value: this function runs
+					// even while the sound editor is closed (other views call soundEditor.
+					// potentialShortcutPadAction() directly), and closed must still force this false, which
+					// getCurrentMenuItem() != nullptr used to do before it became the closed-menu sentinel
+					// (whose getParamKind() default of Kind::NONE would otherwise satisfy this condition).
 					secondLayerShortcutsToggled =
-						getCurrentMenuItem() != nullptr && x == currentParamShortcutX && y == currentParamShortcutY
+						menuItemNavigationRecord[navigationDepth] != nullptr && x == currentParamShortcutX
+						&& y == currentParamShortcutY
 						&& getCurrentMenuItem()->getParamKind() != modulation::params::Kind::PATCH_CABLE
 							? !secondLayerShortcutsToggled
 							: false;
@@ -2129,9 +2123,8 @@ doMIDIOrCV:
 	return true;
 }
 
-MenuItem* SoundEditor::getCurrentMenuItem() {
-	return menuItemNavigationRecord[navigationDepth];
-}
+// SoundEditor::getCurrentMenuItem() is defined in sound_editor_current_menu_item.cpp - kept separate so
+// it can be linked into a host unit test on its own, without the rest of this file's dependency chain.
 
 bool SoundEditor::inSettingsMenu() {
 	return (menuItemNavigationRecord[0] == &settingsRootMenu);
