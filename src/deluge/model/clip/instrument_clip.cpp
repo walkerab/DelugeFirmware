@@ -2602,8 +2602,21 @@ void InstrumentClip::restoreSavedContentFrom(Clip* savedClip, ModelStackWithTime
 	// type, filter mode - from the corresponding Sound(s) in the freshly re-parsed clip. Matched by
 	// drum name rather than index, since identity-preserving matching above may leave live rows in a
 	// different order/index than the saved file's rows.
+	//
+	// paramManager.cloneParamCollectionsFrom() above (in Clip::restoreSavedContentFrom() /
+	// refreshNoteRowContentInPlace()) restores each AutoParam's stored value directly, bypassing the
+	// normal notifyParamModifiedInSomeWay() -> Sound::notifyValueChangeViaLPF() ->
+	// recalculatePatchingToParam() chain that every other value-changing path (knob turn, automation,
+	// menu edit) goes through to refresh Patcher's cached paramFinalValues[] - the array actually read
+	// during real-time rendering (sound.cpp's use of paramFinalValues[LOCAL_VOLUME] etc.). Without this,
+	// a reset clip's stored values are correct (so the "modified" indicator clears right away) but the
+	// audible output doesn't follow until the user touches a knob and forces that cache to refresh.
+	// performInitialPatching() is the same call Sound(Instrument)::setActiveClip() uses to resync a
+	// freshly (re)activated paramManager - exactly the situation here.
 	if (output->type == OutputType::SYNTH) {
-		((SoundInstrument*)output)->resetToSavedBaseline((SoundInstrument*)savedInstrumentClip->output);
+		auto* soundInstrument = (SoundInstrument*)output;
+		soundInstrument->resetToSavedBaseline((SoundInstrument*)savedInstrumentClip->output);
+		soundInstrument->patcher.performInitialPatching(*soundInstrument, paramManager);
 	}
 	else if (isKit) {
 		for (int32_t i = 0; i < noteRows.getNumElements(); i++) {
@@ -2622,7 +2635,9 @@ void InstrumentClip::restoreSavedContentFrom(Clip* savedClip, ModelStackWithTime
 			}
 
 			if (savedNoteRow && savedNoteRow->drum && savedNoteRow->drum->type == DrumType::SOUND) {
-				((SoundDrum*)thisNoteRow->drum)->resetToSavedBaseline((SoundDrum*)savedNoteRow->drum);
+				auto* soundDrum = (SoundDrum*)thisNoteRow->drum;
+				soundDrum->resetToSavedBaseline((SoundDrum*)savedNoteRow->drum);
+				soundDrum->patcher.performInitialPatching(*soundDrum, thisNoteRow->paramManager);
 			}
 		}
 	}
