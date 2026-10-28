@@ -59,7 +59,10 @@ void doTranspose(bool on, int32_t newNoteOrCC) {
 		}
 		if (doRender) {
 			RootUI* rootUI = getRootUI();
-			if (rootUI->getUIContextType() == UIType::INSTRUMENT_CLIP) {
+			// getRootUI() is null while waiting to swap songs (see its own comment) - a MIDI transpose
+			// event can still arrive during that window since playback keeps ticking, so there may be
+			// no UI to render to right now.
+			if (rootUI != nullptr && rootUI->getUIContextType() == UIType::INSTRUMENT_CLIP) {
 				switch (rootUI->getUIType()) {
 				case UIType::KEYBOARD_SCREEN:
 					uiNeedsRendering(rootUI, 0xFFFFFFFF, 0);
